@@ -466,7 +466,9 @@ class MoveChip extends StatelessWidget {
     this.number,
     this.selected = false,
     this.onTap,
+    this.badge = '',
   });
+  final String badge;
   final String san;
   final String? number;
   final bool selected;
@@ -496,8 +498,20 @@ class MoveChip extends StatelessWidget {
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Text(
-                san,
+              child: Text.rich(
+                TextSpan(
+                  text: san,
+                  children: [
+                    if (badge.isNotEmpty)
+                      TextSpan(
+                        text: badge,
+                        style: TextStyle(
+                          color: selected ? c.onPrimary : c.error,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                  ],
+                ),
                 style: context.text.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: selected ? c.onPrimary : c.onSurface,

@@ -1,5 +1,7 @@
 import 'package:castlei/core/ui/board.dart';
+import 'package:castlei/core/ui/sfx.dart';
 import 'package:castlei/core/ui/theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,5 +92,37 @@ void main() {
       findsOneWidget,
     );
     handle.dispose();
+  });
+
+  testWidgets('pieces are tracked through moves and captures', (t) async {
+    Position p = Chess.initial;
+    Widget board() => host(
+      SizedBox(
+        width: 400,
+        child: ChessBoard(position: p, onMove: (_) {}),
+      ),
+    );
+    await t.pumpWidget(board());
+    expect(find.byType(SvgPicture), findsNWidgets(32));
+    for (final uci in ['e2e4', 'd7d5', 'e4d5']) {
+      p = p.play(Move.parse(uci)!);
+      await t.pumpWidget(board());
+      await t.pump(const Duration(milliseconds: 200));
+    }
+    // A pawn was captured: 31 pieces remain, none duplicated or lost.
+    expect(find.byType(SvgPicture), findsNWidgets(31));
+    // Taking back (jumping to an earlier position) restores all 32 pieces.
+    p = Chess.initial;
+    await t.pumpWidget(board());
+    await t.pump(const Duration(milliseconds: 200));
+    expect(find.byType(SvgPicture), findsNWidgets(32));
+  });
+
+  test('move effects follow the SAN', () {
+    expect(Sfx.forSan('e4'), MoveSound.move);
+    expect(Sfx.forSan('O-O'), MoveSound.move);
+    expect(Sfx.forSan('exd5'), MoveSound.capture);
+    expect(Sfx.forSan('Nf7+'), MoveSound.check);
+    expect(Sfx.forSan('Qxf7#'), MoveSound.check);
   });
 }

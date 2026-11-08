@@ -30,8 +30,67 @@ class ChessBoard extends StatefulWidget {
   State<ChessBoard> createState() => _BoardState();
 }
 
+class _Tracked {
+  _Tracked(this.id, this.piece);
+  final int id;
+  final Piece piece;
+}
+
 class _BoardState extends State<ChessBoard> {
   Square? selected, dragFrom;
+  // Pieces keep an identity across moves so they can slide to new squares.
+  Map<Square, _Tracked> _pieces = {};
+  int _nextId = 0;
+
+  /// Matches pieces on the new position to the old ones: unchanged squares
+  /// keep their piece, moved pieces reuse the nearest vacated same-type piece.
+  void _sync() {
+    final old = _pieces;
+    final next = <Square, _Tracked>{};
+    final fresh = <Square, Piece>{};
+    for (final entry in widget.position.board.pieces) {
+      final sq = entry.$1, piece = entry.$2;
+      final before = old[sq];
+      if (before != null && before.piece == piece) {
+        next[sq] = before;
+      } else {
+        fresh[sq] = piece;
+      }
+    }
+    final keptIds = {for (final t in next.values) t.id};
+    final free = <Square, _Tracked>{
+      for (final e in old.entries)
+        if (!keptIds.contains(e.value.id)) e.key: e.value,
+    };
+    for (final e in fresh.entries) {
+      Square? best;
+      var bestDistance = 99;
+      for (final o in free.entries) {
+        if (o.value.piece != e.value) continue;
+        final d = math.max(
+          (o.key.file - e.key.file).abs(),
+          (o.key.rank - e.key.rank).abs(),
+        );
+        if (d < bestDistance) {
+          bestDistance = d;
+          best = o.key;
+        }
+      }
+      if (best != null) {
+        next[e.key] = free.remove(best)!;
+      } else {
+        next[e.key] = _Tracked(_nextId++, e.value);
+      }
+    }
+    _pieces = next;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
   int squareIndex(int index) => widget.flipped
       ? ((index ~/ 8) * 8 + 7 - index % 8)
       : ((7 - index ~/ 8) * 8 + index % 8);
@@ -42,6 +101,7 @@ class _BoardState extends State<ChessBoard> {
         old.drawing != widget.drawing) {
       selected = null;
     }
+    if (old.position.fen != widget.position.fen) _sync();
   }
 
   Future<void> choose(Square s) async {
@@ -239,13 +299,6 @@ class _BoardState extends State<ChessBoard> {
                                 ),
                                 child: Stack(
                                   children: [
-                                    if (piece != null)
-                                      Padding(
-                                        padding: EdgeInsets.all(size * .06),
-                                        child: SvgPicture.asset(
-                                          'assets/pieces/${piece.color == Side.white ? 'w' : 'b'}${piece.role.letter.toUpperCase()}.svg',
-                                        ),
-                                      ),
                                     if (legal && !capture)
                                       Center(
                                         child: Container(
@@ -304,6 +357,41 @@ class _BoardState extends State<ChessBoard> {
                             ),
                           );
                         },
+                      ),
+                    ),
+                  ),
+                  IgnorePointer(
+                    child: SizedBox.square(
+                      dimension: box.maxWidth,
+                      child: Stack(
+                        children: [
+                          for (final e in _pieces.entries)
+                            AnimatedPositioned(
+                              key: ValueKey(e.value.id),
+                              duration: MediaQuery.disableAnimationsOf(context)
+                                  ? Duration.zero
+                                  : const Duration(milliseconds: 150),
+                              curve: Curves.easeOutCubic,
+                              left:
+                                  (widget.flipped
+                                      ? 7 - e.key.file
+                                      : e.key.file) *
+                                  size,
+                              top:
+                                  (widget.flipped
+                                      ? e.key.rank
+                                      : 7 - e.key.rank) *
+                                  size,
+                              width: size,
+                              height: size,
+                              child: Padding(
+                                padding: EdgeInsets.all(size * .06),
+                                child: SvgPicture.asset(
+                                  'assets/pieces/${e.value.piece.color == Side.white ? 'w' : 'b'}${e.value.piece.role.letter.toUpperCase()}.svg',
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),

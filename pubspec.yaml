@@ -99,6 +99,7 @@ flutter:
     - assets/NOTICE.txt
     - assets/pieces/
     - assets/puzzles/
+    - assets/sounds/
   fonts:
     - family: Fraunces
       fonts:

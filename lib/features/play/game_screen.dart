@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../core/diagnostics/analytics.dart';
+import '../analysis/eval_graph.dart';
 import '../../core/notifications/notifications.dart';
+import '../../core/ui/sfx.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 
@@ -38,6 +40,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   int budget = 3000, multiPv = 3, hintLevel = 0;
   String annotationColor = 'G';
   bool coordinates = true, sound = false, haptics = true;
+  Future<List<Map<String, dynamic>>>? _reviewRows;
+  Map<String, String> _labels = {};
+  int _reviewKey = -1;
+  String? _soundNode;
+  String _soundResult = '*';
+  bool _soundSeeded = false;
   @override
   void initState() {
     super.initState();
@@ -159,6 +167,31 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Plays a sound/haptic when a move is committed (by either side), not when
+  /// the user merely browses the move list.
+  void _announceMove(ChessGame g, StudyNode? current) {
+    if (!_soundSeeded) {
+      _soundSeeded = true;
+      _soundNode = current?.id;
+      _soundResult = g.result;
+      return;
+    }
+    final moved =
+        current != null &&
+        current.id != _soundNode &&
+        current.parent == _soundNode;
+    final ended = _soundResult == '*' && g.result != '*';
+    _soundNode = current?.id;
+    _soundResult = g.result;
+    if (!moved && !ended) return;
+    final kind = ended && !widget.study
+        ? MoveSound.end
+        : Sfx.forSan(current!.san);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => Sfx.play(kind, sound: sound, haptics: haptics),
+    );
+  }
+
   String clock(int ms) =>
       '${ms ~/ 60000}:${((ms ~/ 1000) % 60).toString().padLeft(2, '0')}';
   @override
@@ -168,6 +201,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final g = widget.game;
       final current = g.nodes.where((n) => n.id == g.current).firstOrNull;
       final path = g.path(g.current);
+      _announceMove(g, current);
+      if (_reviewKey != state.reviewDone || _reviewRows == null) {
+        _reviewKey = state.reviewDone;
+        _reviewRows = widget.repo.db.rows(
+          'SELECT nodes.id,nodes.san,analysis.data FROM analysis JOIN nodes ON nodes.id=analysis.node_id WHERE analysis.game_id=? ORDER BY nodes.ordinal',
+          [g.id],
+        );
+        _reviewRows!.then((rows) {
+          if (!mounted) return;
+          setState(
+            () => _labels = {
+              for (final r in rows)
+                r['id'] as String: jsonDecode(r['data'])['label'] as String,
+            },
+          );
+        });
+      }
       return Scaffold(
         appBar: AppBar(
           title: Text(g.title),
@@ -238,8 +288,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 onShape: annotate,
                 onMove: (m) {
                   hintLevel = 0;
-                  if (sound) SystemSound.play(SystemSoundType.click);
-                  if (haptics) HapticFeedback.selectionClick();
                   cubit.move(m);
                 },
                 arrow: state.hint != null && hintLevel > 1
@@ -593,6 +641,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     MoveChip(
                       number: i % 2 == 0 ? '${i ~/ 2 + 1}.' : null,
                       san: (widget.study ? path : g.mainline)[i].san,
+                      badge: badgeFor(
+                        _labels[(widget.study ? path : g.mainline)[i].id] ?? '',
+                      ),
                       selected:
                           (widget.study ? path : g.mainline)[i].id == g.current,
                       onTap: widget.study
@@ -663,19 +714,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 FutureBuilder(
-                  future: widget.repo.db.rows(
-                    'SELECT nodes.san,analysis.data FROM analysis JOIN nodes ON nodes.id=analysis.node_id WHERE analysis.game_id=? ORDER BY nodes.ordinal',
-                    [g.id],
-                  ),
-                  builder: (context, s) => Column(
-                    children: [
-                      for (final r in s.data ?? [])
-                        ListTile(
-                          title: Text(r['san']),
-                          subtitle: Text(jsonDecode(r['data'])['label']),
+                  future: _reviewRows,
+                  builder: (context, s) {
+                    final points = parseReview(s.data ?? [], g);
+                    return Column(
+                      children: [
+                        EvalGraph(
+                          points: points,
+                          selectedNodeId: g.current,
+                          onSelect: cubit.navigate,
                         ),
-                    ],
-                  ),
+                        for (final p in points)
+                          ListTile(
+                            dense: true,
+                            title: Text(
+                              '${(p.ply + 1) ~/ 2}${p.whiteMoved ? '.' : '...'} ${p.san}${badgeFor(p.label)}',
+                            ),
+                            subtitle: Text('${p.label} · ${p.evalText}'),
+                            selected: p.nodeId == g.current,
+                            onTap: () => cubit.navigate(p.nodeId),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ],
