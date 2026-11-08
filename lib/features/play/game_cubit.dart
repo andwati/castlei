@@ -51,6 +51,11 @@ class GameCubit extends Cubit<GameView> {
           !state.thinking &&
           game.result == '*' &&
           game.position.turn == human);
+  @override
+  void emit(GameView state) {
+    if (!isClosed) super.emit(state);
+  }
+
   Future<void> persist() async {
     if (game.result != '*') {
       game.settings.putIfAbsent(
@@ -117,11 +122,11 @@ class GameCubit extends Cubit<GameView> {
       await commit(move);
       if (!study && game.result == '*') {
         await engineMove();
-      } else {
+      } else if (!isClosed) {
         emit(const GameView());
       }
     } catch (e) {
-      emit(GameView(error: e.toString()));
+      if (!isClosed) emit(GameView(error: e.toString()));
     }
   }
 
@@ -246,12 +251,12 @@ class GameCubit extends Cubit<GameView> {
         throw StateError('Engine returned an illegal move');
       }
       await commit(move);
-      emit(GameView(paused: game.result != '*'));
+      if (!isClosed) emit(GameView(paused: game.result != '*'));
     } on SearchCanceled {
       /* Paused or replaced. */
     } catch (e) {
       watch.stop();
-      emit(GameView(error: e.toString()));
+      if (!isClosed) emit(GameView(error: e.toString()));
     }
   }
 
@@ -323,9 +328,9 @@ class GameCubit extends Cubit<GameView> {
         moves: game.path(game.current).map((n) => n.uci).toList(),
         milliseconds: 1000,
       );
-      emit(GameView(hint: r.bestmove));
+      if (!isClosed) emit(GameView(hint: r.bestmove));
     } catch (e) {
-      emit(GameView(error: e.toString()));
+      if (!isClosed) emit(GameView(error: e.toString()));
     }
   }
 
