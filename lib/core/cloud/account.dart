@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import 'remote_config.dart';
+
 /// Sign-in (Firebase Auth): Google on every platform, Apple on iOS.
 /// The app is fully usable signed out; an account only enables cloud backup.
 class AccountService extends ChangeNotifier {
@@ -18,9 +20,13 @@ class AccountService extends ChangeNotifier {
   bool _googleReady = false;
   User? get user => available ? FirebaseAuth.instance.currentUser : null;
   bool get signedIn => user != null;
-  // iOS uses the native Apple flow; Android uses Firebase's web flow
-  // (needs the Services ID return URL https://<project>.firebaseapp.com/__/auth/handler).
-  bool get appleSupported => Platform.isIOS || Platform.isAndroid;
+  // Hidden until the Apple Developer account and Apple devices exist; flip the
+  // Remote Config parameter `apple_sign_in_enabled` to show it again.
+  // iOS uses the native Apple flow; Android uses Firebase's web flow (needs the
+  // Services ID return URL https://<project>.firebaseapp.com/__/auth/handler).
+  bool get appleSupported =>
+      (Platform.isIOS || Platform.isAndroid) &&
+      RemoteSettings.appleSignInEnabled;
 
   String get label {
     final u = user;

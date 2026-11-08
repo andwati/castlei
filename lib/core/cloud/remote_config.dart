@@ -11,6 +11,8 @@ class RemoteSettings {
     'engine_max_ms_timed': 2000,
     'cloud_backup_enabled': true,
     'reminders_enabled': true,
+    // Off until the Apple Developer account and Apple devices exist.
+    'apple_sign_in_enabled': false,
     'announcement_id': '',
     'announcement_text': '',
   };
@@ -52,6 +54,7 @@ class RemoteSettings {
       _int('engine_max_ms_timed').clamp(200, 5000);
   static bool get cloudBackupEnabled => _bool('cloud_backup_enabled');
   static bool get remindersEnabled => _bool('reminders_enabled');
+  static bool get appleSignInEnabled => _bool('apple_sign_in_enabled');
   static String get announcementId => _string('announcement_id');
   static String get announcementText => _string('announcement_text');
 }

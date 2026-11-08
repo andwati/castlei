@@ -20,6 +20,7 @@ Done from the command line already: Android app registered with the release + de
 | `engine_max_ms_timed` | 2000 | Engine thinking cap, timed games (200–5000) |
 | `cloud_backup_enabled` | true | Kill switch for automatic cloud backup |
 | `reminders_enabled` | true | Kill switch for local reminders |
+| `apple_sign_in_enabled` | false | Shows "Continue with Apple" in Settings. Keep false until the Apple provider is enabled in Authentication (Apple Developer account + Apple devices). |
 | `announcement_id` / `announcement_text` | empty | Dismissible card on the Home tab (change the id to show it again) |
 
 5. **Cloud Messaging:** announcements use the topic `announcements` (Notifications composer → target topic). Android works as is. For iOS upload an APNs auth key (Project settings → Cloud Messaging).

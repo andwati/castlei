@@ -111,6 +111,8 @@ void main() {
     expect(RemoteSettings.engineMaxMsTimed, 2000);
     expect(RemoteSettings.cloudBackupEnabled, isTrue);
     expect(RemoteSettings.remindersEnabled, isTrue);
+    // Apple sign-in stays hidden until explicitly enabled.
+    expect(RemoteSettings.appleSignInEnabled, isFalse);
     expect(RemoteSettings.announcementText, isEmpty);
   });
 
