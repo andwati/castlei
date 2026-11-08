@@ -348,7 +348,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       Row(
                         children: [
                           Expanded(
-                            child: _Tool(
+                            child: ToolButton(
                               icon: Icons.undo_rounded,
                               label: 'Take back',
                               onTap: g.current == null ? null : cubit.undo,
@@ -356,7 +356,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: _Tool(
+                            child: ToolButton(
                               icon: Icons.lightbulb_outline_rounded,
                               label: 'Hint',
                               onTap: () async {
@@ -369,7 +369,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: _Tool(
+                            child: ToolButton(
                               icon: Icons.flag_outlined,
                               label: 'Resign',
                               danger: true,
@@ -572,18 +572,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               const Divider(),
               Text('MOVES', style: Theme.of(context).textTheme.labelLarge),
               Wrap(
-                spacing: 4,
+                spacing: 0,
+                runSpacing: 2,
                 children: [
                   for (
                     var i = 0;
                     i < (widget.study ? path : g.mainline).length;
                     i++
                   )
-                    ActionChip(
-                      label: Text(
-                        '${i % 2 == 0 ? '${i ~/ 2 + 1}. ' : ''}${(widget.study ? path : g.mainline)[i].san}',
-                      ),
-                      onPressed: widget.study
+                    MoveChip(
+                      number: i % 2 == 0 ? '${i ~/ 2 + 1}.' : null,
+                      san: (widget.study ? path : g.mainline)[i].san,
+                      selected:
+                          (widget.study ? path : g.mainline)[i].id == g.current,
+                      onTap: widget.study
                           ? () => cubit.navigate(
                               (widget.study ? path : g.mainline)[i].id,
                             )
@@ -705,48 +707,4 @@ class _Clock extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _Tool extends StatelessWidget {
-  const _Tool({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.danger = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool danger;
-  @override
-  Widget build(BuildContext context) {
-    final c = danger ? context.colors.error : context.colors.onSurface;
-    return Material(
-      color: context.colors.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(Corner.sm),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Corner.sm),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: onTap == null ? context.colors.outline : c),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                style: context.text.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: onTap == null ? context.colors.outline : c,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -2,6 +2,9 @@ import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../core/ui/theme.dart';
+import '../../core/ui/widgets.dart';
+
 class PositionEditor extends StatefulWidget {
   const PositionEditor({super.key, required this.initialFen});
   final String initialFen;
@@ -84,38 +87,45 @@ class _EditorState extends State<PositionEditor> {
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        AspectRatio(
-          aspectRatio: 1,
-          child: GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 64,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 8,
-            ),
-            itemBuilder: (c, i) {
-              final p = board[i];
-              return Semantics(
-                label:
-                    '${String.fromCharCode(97 + i % 8)}${8 - i ~/ 8}, ${p.isEmpty ? 'empty' : p}',
-                button: true,
-                child: InkWell(
-                  onTap: () => setState(() => board[i] = selected),
-                  child: Container(
-                    color: (i ~/ 8 + i % 8).isEven
-                        ? const Color(0xffe9eee4)
-                        : const Color(0xff72958a),
-                    child: p.isEmpty
-                        ? null
-                        : SvgPicture.asset(
-                            'assets/pieces/${p == p.toUpperCase() ? 'w' : 'b'}${p.toUpperCase()}.svg',
-                          ),
+        if (error != null) ...[
+          FeedbackCard(error!, tone: Tone.bad, icon: Icons.rule_rounded),
+          const SizedBox(height: 12),
+        ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 64,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 8,
+              ),
+              itemBuilder: (c, i) {
+                final p = board[i];
+                return Semantics(
+                  label:
+                      '${String.fromCharCode(97 + i % 8)}${8 - i ~/ 8}, ${p.isEmpty ? 'empty' : p}',
+                  button: true,
+                  child: InkWell(
+                    onTap: () => setState(() => board[i] = selected),
+                    child: Container(
+                      color: (i ~/ 8 + i % 8).isEven
+                          ? context.tokens.boardLight
+                          : context.tokens.boardDark,
+                      child: p.isEmpty
+                          ? null
+                          : SvgPicture.asset(
+                              'assets/pieces/${p == p.toUpperCase() ? 'w' : 'b'}${p.toUpperCase()}.svg',
+                            ),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SectionLabel('Pieces'),
         Wrap(
           spacing: 4,
           children: [
@@ -161,6 +171,7 @@ class _EditorState extends State<PositionEditor> {
             ),
           ],
         ),
+        const SectionLabel('Position details'),
         DropdownButtonFormField<String>(
           initialValue: side,
           decoration: const InputDecoration(labelText: 'Side to move'),
@@ -200,11 +211,6 @@ class _EditorState extends State<PositionEditor> {
           decoration: const InputDecoration(labelText: 'Fullmove number'),
           onChanged: (v) => full = int.tryParse(v) ?? 0,
         ),
-        if (error != null)
-          Text(
-            error!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
       ],
     ),
   );

@@ -9,7 +9,10 @@ Warm paper surfaces by day, deep pine by night. Teal leads, coral nudges, brass 
 - Spacing `Space.*`, radii `Corner.*` (12/18/28), pill-shaped buttons with 48+ dp targets.
 
 ## Components (`lib/core/ui/widgets.dart`)
-`HeroCard` + `HeroButton` (pine card with a battlement crown), `ActionTile`, `SectionLabel`, `StatusChip` (always icon + text), `Battlements` (signature motif).
+`HeroCard` + `HeroButton` (pine card with a battlement crown), `ActionTile`, `SectionLabel`, `StatusChip` (always icon + text), `FeedbackCard` (tinted banner with icon), `ToolButton`, `StatTile`, `GroupCard`, `MoveChip`, `Battlements` (signature motif).
+
+## App icon
+Original castle on pine (`design/icon.svg`, `design/icon_foreground.svg`). Android uses an adaptive icon (foreground + `#0F4F49` background, monochrome layer for themed icons); iOS PNGs are exported without alpha from the same source.
 
 ## Board (`lib/core/ui/board.dart`)
 Last-move and check indicators, capture rings vs. move dots, filled-head arrows, promotion bottom sheet with piece buttons, per-square semantics including last-move/check state.

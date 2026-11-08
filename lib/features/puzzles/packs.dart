@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
 import '../../core/storage/repository.dart';
+import '../../core/ui/theme.dart';
+import '../../core/ui/widgets.dart';
 
 class PackScreen extends StatefulWidget {
   const PackScreen({super.key, required this.repo});
@@ -137,63 +139,162 @@ class _PackState extends State<PackScreen> {
     }
   }
 
+  Future<void> _remove(Map<String, dynamic> p) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Remove ${p['id']}?'),
+        content: const Text(
+          'Its puzzles are deleted from this device. Your completed attempts and statistics are kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    await widget.repo.db.transaction(() async {
+      await widget.repo.db.execute('DELETE FROM puzzles WHERE pack=?', [
+        p['id'],
+      ]);
+      await widget.repo.db.execute('DELETE FROM packs WHERE id=?', [p['id']]);
+    });
+    if (mounted) setState(() => status = 'Removed ${p['id']}');
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Puzzle collections')),
-    body: ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text(status),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: busy ? null : refresh,
-          icon: const Icon(Icons.refresh),
-          label: const Text('Refresh catalog'),
-        ),
-        if (busy) const LinearProgressIndicator(),
-        for (final p in packs)
-          Card(
-            child: ListTile(
-              title: Text(p['title']),
-              subtitle: Text(
-                '${p['count']} puzzles · ${((p['bytes'] as int) / 1024).round()} KB',
-              ),
-              trailing: IconButton(
-                onPressed: busy
-                    ? null
-                    : () => install(Map<String, dynamic>.from(p)),
-                icon: const Icon(Icons.download),
-              ),
+    body: FutureBuilder(
+      future: widget.repo.db.rows('SELECT * FROM packs'),
+      builder: (c, snap) {
+        final installed = {
+          for (final r in snap.data ?? []) r['id'] as String: r,
+        };
+        final failed =
+            status.contains('failed') ||
+            status.contains('Invalid') ||
+            status.contains('mismatch') ||
+            status.contains('Exception') ||
+            status.contains('Error');
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            FeedbackCard(
+              status,
+              busy: busy,
+              tone: failed
+                  ? Tone.bad
+                  : status.startsWith('Installed') ||
+                        status.startsWith('Catalog refreshed')
+                  ? Tone.good
+                  : Tone.info,
+              icon: failed
+                  ? Icons.cloud_off_rounded
+                  : Icons.cloud_done_outlined,
             ),
-          ),
-        FutureBuilder(
-          future: widget.repo.db.rows('SELECT * FROM packs'),
-          builder: (c, s) => Column(
-            children: [
-              for (final p in s.data ?? [])
-                ListTile(
-                  title: Text('Installed: ${p['id']}'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () async {
-                      await widget.repo.db.transaction(() async {
-                        await widget.repo.db.execute(
-                          'DELETE FROM puzzles WHERE pack=?',
-                          [p['id']],
-                        );
-                        await widget.repo.db.execute(
-                          'DELETE FROM packs WHERE id=?',
-                          [p['id']],
-                        );
-                      });
-                      setState(() {});
-                    },
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: busy ? null : refresh,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Refresh catalog'),
+            ),
+            if (busy)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: LinearProgressIndicator(),
+              ),
+            const SectionLabel('Available'),
+            if (packs.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Refresh the catalog to see optional puzzle packs. Downloads only happen when you choose one.',
+                  textAlign: TextAlign.center,
+                  style: context.text.bodyMedium?.copyWith(
+                    color: context.colors.onSurfaceVariant,
                   ),
                 ),
-            ],
-          ),
-        ),
-      ],
+              ),
+            for (final p in packs)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p['title'],
+                              style: context.text.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                StatusChip(
+                                  '${p['count']} puzzles',
+                                  icon: Icons.extension_outlined,
+                                ),
+                                StatusChip(
+                                  '${((p['bytes'] as int) / 1024).round()} KB',
+                                  icon: Icons.download_for_offline_outlined,
+                                ),
+                                if (installed.containsKey(p['id']))
+                                  StatusChip(
+                                    'On this device',
+                                    icon: Icons.check_circle_outline,
+                                    color: context.colors.primary,
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: installed.containsKey(p['id'])
+                            ? 'Reinstall ${p['title']}'
+                            : 'Download ${p['title']}',
+                        onPressed: busy
+                            ? null
+                            : () => install(Map<String, dynamic>.from(p)),
+                        icon: const Icon(Icons.download),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (installed.isNotEmpty) const SectionLabel('Installed'),
+            for (final p in installed.values)
+              Card(
+                child: ListTile(
+                  leading: Icon(
+                    Icons.inventory_2_outlined,
+                    color: context.colors.primary,
+                  ),
+                  title: Text('Installed: ${p['id']}'),
+                  trailing: IconButton(
+                    tooltip: 'Remove ${p['id']}',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: busy ? null : () => _remove(p),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     ),
   );
 }

@@ -248,3 +248,265 @@ class StatusChip extends StatelessWidget {
     );
   }
 }
+
+enum Tone { neutral, good, bad, info }
+
+/// Inline feedback banner: icon + text on a tinted surface (never color alone).
+class FeedbackCard extends StatelessWidget {
+  const FeedbackCard(
+    this.text, {
+    super.key,
+    this.tone = Tone.neutral,
+    this.icon,
+    this.busy = false,
+  });
+  final String text;
+  final Tone tone;
+  final IconData? icon;
+  final bool busy;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final (bg, fg, defaultIcon) = switch (tone) {
+      Tone.good => (
+        c.primaryContainer,
+        c.onPrimaryContainer,
+        Icons.check_circle_rounded,
+      ),
+      Tone.bad => (
+        c.secondaryContainer,
+        c.onSecondaryContainer,
+        Icons.error_outline_rounded,
+      ),
+      Tone.info => (
+        c.surfaceContainerHigh,
+        c.onSurface,
+        Icons.info_outline_rounded,
+      ),
+      Tone.neutral => (
+        c.surfaceContainerHigh,
+        c.onSurface,
+        Icons.touch_app_outlined,
+      ),
+    };
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(Corner.md),
+        ),
+        child: Row(
+          children: [
+            if (busy)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              )
+            else
+              Icon(icon ?? defaultIcon, color: fg),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: context.text.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Icon-over-label toolbar button.
+class ToolButton extends StatelessWidget {
+  const ToolButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool danger;
+  @override
+  Widget build(BuildContext context) {
+    final c = danger ? context.colors.error : context.colors.onSurface;
+    final fg = onTap == null ? context.colors.outline : c;
+    return Material(
+      color: context.colors.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(Corner.sm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Corner.sm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: fg),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                style: context.text.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Big-number stat tile with optional progress.
+class StatTile extends StatelessWidget {
+  const StatTile({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.caption,
+    this.progress,
+    this.icon,
+    this.accent,
+  });
+  final String title, value, caption;
+  final double? progress;
+  final IconData? icon;
+  final Color? accent;
+  @override
+  Widget build(BuildContext context) {
+    final tint = accent ?? context.colors.primary;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 20, color: tint),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    title,
+                    style: context.text.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  value,
+                  style: context.text.headlineMedium?.copyWith(color: tint),
+                ),
+              ],
+            ),
+            if (progress != null) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  color: tint,
+                  minHeight: 8,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              caption,
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Grouped settings card.
+class GroupCard extends StatelessWidget {
+  const GroupCard({super.key, required this.children});
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      children: [
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) Divider(height: 1, indent: 16, endIndent: 16),
+          children[i],
+        ],
+      ],
+    ),
+  );
+}
+
+/// Move-list chip: highlights the current move, never looks disabled.
+class MoveChip extends StatelessWidget {
+  const MoveChip({
+    super.key,
+    required this.san,
+    this.number,
+    this.selected = false,
+    this.onTap,
+  });
+  final String san;
+  final String? number;
+  final bool selected;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (number != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 6, right: 2),
+            child: Text(
+              number!,
+              style: context.text.bodyMedium?.copyWith(
+                color: c.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        Material(
+          color: selected ? c.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Text(
+                san,
+                style: context.text.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: selected ? c.onPrimary : c.onSurface,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

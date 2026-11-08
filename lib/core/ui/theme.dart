@@ -224,6 +224,24 @@ ThemeData buildTheme(Brightness b) {
         textStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
     ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (st) => st.contains(WidgetState.selected)
+              ? scheme.primaryContainer
+              : Colors.transparent,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (st) => st.contains(WidgetState.selected)
+              ? scheme.onPrimaryContainer
+              : scheme.onSurface,
+        ),
+        side: WidgetStatePropertyAll(BorderSide(color: scheme.outline)),
+        textStyle: const WidgetStatePropertyAll(
+          TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+    ),
     chipTheme: ChipThemeData(
       shape: stadium,
       side: BorderSide(color: scheme.outlineVariant),

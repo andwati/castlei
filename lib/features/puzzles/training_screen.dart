@@ -4,6 +4,8 @@ import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/ui/board.dart';
+import '../../core/ui/theme.dart';
+import '../../core/ui/widgets.dart';
 import '../../core/chess/model.dart';
 import '../../core/storage/repository.dart';
 import 'training.dart';
@@ -179,22 +181,35 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
             children: [
               if (!opening)
                 Wrap(
-                  spacing: 12,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    DropdownButton<int>(
-                      value: rating,
-                      items: [
-                        for (final r in [1000, 1500, 2000, 2500, 3000])
-                          DropdownMenuItem(value: r, child: Text('Up to $r')),
-                      ],
-                      onChanged: (r) {
-                        rating = r!;
+                    PopupMenuButton<int>(
+                      tooltip: 'Maximum rating',
+                      initialValue: rating,
+                      onSelected: (r) {
+                        rating = r;
                         load();
                       },
+                      itemBuilder: (_) => [
+                        for (final r in [1000, 1500, 2000, 2500, 3000])
+                          PopupMenuItem(value: r, child: Text('Up to $r')),
+                      ],
+                      child: Chip(
+                        avatar: const Icon(Icons.speed_rounded, size: 18),
+                        label: Text('Up to $rating'),
+                        deleteIcon: const Icon(Icons.arrow_drop_down),
+                        onDeleted: null,
+                      ),
                     ),
-                    DropdownButton<String>(
-                      value: theme,
-                      items: [
+                    PopupMenuButton<String>(
+                      tooltip: 'Theme',
+                      initialValue: theme,
+                      onSelected: (t) {
+                        theme = t;
+                        load();
+                      },
+                      itemBuilder: (_) => [
                         for (final t in [
                           '',
                           'fork',
@@ -203,31 +218,64 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                           'endgame',
                           'sacrifice',
                         ])
-                          DropdownMenuItem(
+                          PopupMenuItem(
                             value: t,
                             child: Text(t.isEmpty ? 'All themes' : t),
                           ),
                       ],
-                      onChanged: (t) {
-                        theme = t!;
-                        load();
-                      },
+                      child: Chip(
+                        avatar: const Icon(Icons.category_outlined, size: 18),
+                        label: Text(theme.isEmpty ? 'All themes' : theme),
+                      ),
                     ),
                   ],
                 ),
               if (items.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Nothing due in this selection. Add repertoire lines or try a different puzzle filter.',
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.task_alt_rounded,
+                        size: 52,
+                        color: context.colors.primary,
+                      ),
+                      const SizedBox(height: 14),
+                      Text('All caught up', style: context.text.headlineSmall),
+                      const SizedBox(height: 8),
+                      Text(
+                        opening
+                            ? 'Nothing is due in this repertoire. Come back tomorrow, or add more lines.'
+                            : 'Nothing matches this filter. Try a higher rating or another theme.',
+                        textAlign: TextAlign.center,
+                        style: context.text.bodyMedium?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               if (position != null && items.isNotEmpty) ...[
-                Text(
-                  '${index + 1} / ${items.length}',
-                  style: Theme.of(context).textTheme.labelLarge,
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${index + 1} of ${items.length}',
+                        style: context.text.labelLarge,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: (index + (complete ? 1 : 0)) / items.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
                 ChessBoard(
                   position: position!,
                   flipped:
@@ -244,37 +292,63 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                       : null,
                 ),
                 const SizedBox(height: 16),
-                Text(message, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    if (!complete)
-                      OutlinedButton(
-                        onPressed: () => setState(() => hints++),
-                        child: const Text('Hint'),
-                      ),
-                    if (!complete)
-                      TextButton(
-                        onPressed: () async {
-                          setState(() {
-                            failed = true;
-                            message = 'Solution: ${solution.join(' ')}';
-                          });
-                          await finish(false);
-                        },
-                        child: const Text('Reveal'),
-                      ),
-                    if (complete && index + 1 < items.length)
-                      FilledButton(
-                        onPressed: () => setState(() {
-                          index++;
-                          start();
-                        }),
-                        child: const Text('Next position'),
-                      ),
-                  ],
+                FeedbackCard(
+                  message,
+                  tone: failed && !complete
+                      ? Tone.bad
+                      : complete
+                      ? (failed || hints > 0 ? Tone.info : Tone.good)
+                      : Tone.neutral,
+                  icon: complete
+                      ? (failed || hints > 0
+                            ? Icons.school_outlined
+                            : Icons.emoji_events_outlined)
+                      : failed
+                      ? Icons.refresh_rounded
+                      : Icons.touch_app_outlined,
                 ),
+                const SizedBox(height: 12),
+                if (!complete)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ToolButton(
+                          icon: Icons.lightbulb_outline_rounded,
+                          label: 'Hint',
+                          onTap: () => setState(() => hints++),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ToolButton(
+                          icon: Icons.visibility_outlined,
+                          label: 'Reveal',
+                          onTap: () async {
+                            setState(() {
+                              failed = true;
+                              message = 'Solution: ${solution.join(' ')}';
+                            });
+                            await finish(false);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                if (complete && index + 1 < items.length)
+                  FilledButton.icon(
+                    onPressed: () => setState(() {
+                      index++;
+                      start();
+                    }),
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: const Text('Next position'),
+                  ),
+                if (complete && index + 1 >= items.length)
+                  FeedbackCard(
+                    'Session complete — nice work.',
+                    tone: Tone.good,
+                    icon: Icons.celebration_outlined,
+                  ),
               ],
             ],
           ),

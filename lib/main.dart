@@ -124,6 +124,7 @@ class _HomeState extends State<HomeShell> {
   String search = '';
   bool favorites = false;
   String resultFilter = 'All';
+  String? sourceFilter;
   Future<void> guard(Future<void> Function() action) async {
     try {
       await action();
@@ -436,25 +437,6 @@ class _HomeState extends State<HomeShell> {
     }
   }
 
-  Widget activity(
-    String title,
-    String detail,
-    IconData icon,
-    VoidCallback onTap,
-  ) => Card(
-    child: ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      leading: Icon(
-        icon,
-        color: Theme.of(context).colorScheme.primary,
-        size: 28,
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(detail),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
-    ),
-  );
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -614,20 +596,44 @@ class _HomeState extends State<HomeShell> {
               ),
               onChanged: (s) => setState(() => search = s),
             ),
-            Wrap(
-              spacing: 8,
-              children: [
-                FilterChip(
-                  label: const Text('Favorites'),
-                  selected: favorites,
-                  onSelected: (v) => setState(() => favorites = v),
-                ),
-                TextButton.icon(
-                  onPressed: () => guard(importPgn),
-                  icon: const Icon(Icons.file_open_outlined),
-                  label: const Text('Import PGN'),
-                ),
-              ],
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  FilterChip(
+                    avatar: const Icon(Icons.star_rounded, size: 18),
+                    label: const Text('Favorites'),
+                    selected: favorites,
+                    onSelected: (v) => setState(() => favorites = v),
+                  ),
+                  const SizedBox(width: 8),
+                  for (final e in {
+                    'engine': ('Engine', Icons.memory),
+                    'import': ('Imported', Icons.file_open_outlined),
+                    'study': ('Studies', Icons.school_outlined),
+                  }.entries) ...[
+                    FilterChip(
+                      avatar: Icon(e.value.$2, size: 18),
+                      label: Text(e.value.$1),
+                      selected: sourceFilter == e.key,
+                      onSelected: (v) =>
+                          setState(() => sourceFilter = v ? e.key : null),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                backgroundColor: context.colors.primaryContainer,
+                foregroundColor: context.colors.onPrimaryContainer,
+              ),
+              onPressed: () => guard(importPgn),
+              icon: const Icon(Icons.file_open_outlined),
+              label: const Text('Import PGN'),
             ),
           ],
           if (tab != 2)
@@ -641,6 +647,9 @@ class _HomeState extends State<HomeShell> {
                     .where(
                       (r) =>
                           (tab != 1 || r['source'] == 'engine') &&
+                          (tab != 3 ||
+                              sourceFilter == null ||
+                              r['source'] == sourceFilter) &&
                           (!favorites || r['favorite'] == 1) &&
                           ('${r['title']} ${r['headers']}'
                               .toLowerCase()
@@ -818,7 +827,8 @@ class _HomeState extends State<HomeShell> {
             body: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                FilledButton(
+                FilledButton.icon(
+                  icon: const Icon(Icons.add_rounded),
                   onPressed: () => guard(() async {
                     final rows = await widget.repo.games();
                     if (!context.mounted) return;
@@ -854,25 +864,72 @@ class _HomeState extends State<HomeShell> {
                         .buildCards(await widget.repo.load(id), side);
                     update(() {});
                   }),
-                  child: const Text('Create from library'),
+                  label: const Text('Create from library'),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    'Create a study or import PGN in Library, add your variations, then build or refresh its repertoire here.',
-                  ),
+                const SizedBox(height: 12),
+                const FeedbackCard(
+                  'Create a study or import PGN in Library, add your variations, then build or refresh its repertoire here.',
+                  tone: Tone.info,
+                  icon: Icons.lightbulb_outline_rounded,
                 ),
                 FutureBuilder(
                   future: widget.repo.db.rows(
-                    'SELECT repertoires.*,games.title FROM repertoires JOIN games ON games.id=repertoires.game_id',
+                    'SELECT repertoires.*,games.title,'
+                    '(SELECT COUNT(*) FROM cards WHERE repertoire_id=repertoires.id AND stage=0) AS fresh,'
+                    '(SELECT COUNT(*) FROM cards WHERE repertoire_id=repertoires.id AND stage>0 AND due<=?) AS due '
+                    'FROM repertoires JOIN games ON games.id=repertoires.game_id',
+                    [DateTime.now().millisecondsSinceEpoch],
                   ),
                   builder: (c, s) => Column(
                     children: [
                       for (final r in s.data ?? [])
                         Card(
                           child: ListTile(
-                            title: Text(r['title']),
-                            subtitle: Text('Train ${r['side']}'),
+                            leading: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: context.colors.primaryContainer,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                r['side'] == 'white'
+                                    ? Icons.circle_outlined
+                                    : Icons.circle,
+                                color: context.colors.onPrimaryContainer,
+                              ),
+                            ),
+                            title: Text(
+                              r['title'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  StatusChip(
+                                    'Train ${r['side']}',
+                                    icon: Icons.person_outline,
+                                  ),
+                                  StatusChip(
+                                    '${r['due']} due',
+                                    icon: Icons.schedule_rounded,
+                                    color: (r['due'] as int) > 0
+                                        ? context.colors.secondary
+                                        : null,
+                                  ),
+                                  StatusChip(
+                                    '${r['fresh']} new',
+                                    icon: Icons.fiber_new_rounded,
+                                    color: context.colors.primary,
+                                  ),
+                                ],
+                              ),
+                            ),
                             trailing: PopupMenuButton<String>(
                               tooltip: 'Repertoire actions',
                               onSelected: (a) => guard(() async {
@@ -975,97 +1032,129 @@ class _HomeState extends State<HomeShell> {
   }
 
   Future<void> settings() async {
+    var mode = ThemeMode.values.byName(
+      await widget.repo.preference('theme', 'system') as String,
+    );
+    var crash = await widget.repo.preference('crashConsent', false) as bool;
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Settings')),
-          body: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              const Text('APPEARANCE'),
-              for (final mode in ThemeMode.values)
-                ListTile(
-                  title: Text('${mode.name} theme'),
-                  onTap: () {
-                    widget.onTheme(mode);
-                    widget.repo.setPreference('theme', mode.name);
-                  },
+        builder: (context) => StatefulBuilder(
+          builder: (context, update) => Scaffold(
+            appBar: AppBar(title: const Text('Settings')),
+            body: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                const SectionLabel('Appearance'),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<ThemeMode>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        icon: Icon(Icons.brightness_auto_outlined),
+                        label: Text('System'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        icon: Icon(Icons.light_mode_outlined),
+                        label: Text('Light'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        icon: Icon(Icons.dark_mode_outlined),
+                        label: Text('Dark'),
+                      ),
+                    ],
+                    selected: {mode},
+                    onSelectionChanged: (v) {
+                      update(() => mode = v.first);
+                      widget.onTheme(mode);
+                      widget.repo.setPreference('theme', mode.name);
+                    },
+                  ),
                 ),
-              const Divider(),
-              activity(
-                'Practice preferences',
-                'Feedback, engine resources, and drill limits',
-                Icons.tune,
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PreferencesScreen(
-                      repo: widget.repo,
-                      engine: widget.engine,
+                const SectionLabel('Practice'),
+                ActionTile(
+                  title: 'Practice preferences',
+                  subtitle: 'Feedback, engine resources, and drill limits',
+                  icon: Icons.tune_rounded,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PreferencesScreen(
+                        repo: widget.repo,
+                        engine: widget.engine,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              activity(
-                'Export full backup',
-                'Unencrypted archive; store it privately',
-                Icons.backup_outlined,
-                () => guard(backup),
-              ),
-              activity(
-                'Restore backup',
-                'Validate, then replace local data',
-                Icons.restore,
-                () => guard(restore),
-              ),
-              activity(
-                'Enable crash reports',
-                'Optional Firebase reports; no Analytics',
-                Icons.bug_report_outlined,
-                () => guard(() async {
-                  final enabled = await widget.repo.preference(
-                    'crashConsent',
-                    false,
-                  ) as bool;
-                  try {
-                    await Firebase.initializeApp();
-                    await FirebaseCrashlytics.instance
-                        .setCrashlyticsCollectionEnabled(!enabled);
-                    await widget.repo.setPreference('crashConsent', !enabled);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            enabled
-                                ? 'Crash reports disabled'
-                                : 'Crash reports enabled',
-                          ),
-                        ),
-                      );
-                    }
-                  } catch (_) {
-                    throw StateError(
-                      'Firebase is not configured in this private build. No reports were enabled.',
-                    );
-                  }
-                }),
-              ),
-              const Divider(),
-              const ListTile(
-                title: Text('Castlei 1.0.0'),
-                subtitle: Text(
-                  'Stockfish 18 · GPL-3.0\nLocal-first. No account required.\niOS validation pending.',
+                const SectionLabel('Your data'),
+                ActionTile(
+                  title: 'Export full backup',
+                  subtitle: 'Unencrypted archive; store it privately',
+                  icon: Icons.backup_rounded,
+                  accent: context.colors.tertiary,
+                  onTap: () => guard(backup),
                 ),
-              ),
-              TextButton(
-                onPressed: () => showLicensePage(
-                  context: context,
-                  applicationName: 'Castlei',
+                ActionTile(
+                  title: 'Restore backup',
+                  subtitle: 'Validate, then replace local data',
+                  icon: Icons.restore_rounded,
+                  accent: context.colors.secondary,
+                  onTap: () => guard(restore),
                 ),
-                child: const Text('Open-source licenses'),
-              ),
-            ],
+                const SectionLabel('Privacy'),
+                GroupCard(
+                  children: [
+                    SwitchListTile(
+                      secondary: const Icon(Icons.bug_report_outlined),
+                      title: const Text('Crash reports'),
+                      subtitle: const Text(
+                        'Off by default. Optional Firebase reports with no analytics and no chess data.',
+                      ),
+                      value: crash,
+                      onChanged: (v) => guard(() async {
+                        try {
+                          await Firebase.initializeApp();
+                          await FirebaseCrashlytics.instance
+                              .setCrashlyticsCollectionEnabled(v);
+                          await widget.repo.setPreference('crashConsent', v);
+                          update(() => crash = v);
+                        } catch (_) {
+                          throw StateError(
+                            'Firebase is not configured in this private build. No reports were enabled.',
+                          );
+                        }
+                      }),
+                    ),
+                  ],
+                ),
+                const SectionLabel('About'),
+                GroupCard(
+                  children: [
+                    const ListTile(
+                      leading: Icon(Icons.castle_outlined),
+                      title: Text('Castlei 1.0.0'),
+                      subtitle: Text(
+                        'Stockfish 18 · GPL-3.0\nLocal-first. No account required.\niOS validation pending.',
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.description_outlined),
+                      title: const Text('Open-source licenses'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => showLicensePage(
+                        context: context,
+                        applicationName: 'Castlei',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

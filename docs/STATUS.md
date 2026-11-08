@@ -1,7 +1,7 @@
 # Validation status
 
 ## Automated
-- `flutter analyze` clean; `flutter test` 9 unit/widget tests pass.
+- `flutter analyze` clean; `flutter test` unit/widget tests pass (domain, storage, backup, scheduling, repertoire, board check/last-move/promotion semantics, 200% text on a 360 dp phone).
 - `integration_test/` (engine_play_test, flows_test: 9 tests) passes on the Android emulator (API 37, x86_64) and the owner phone (SM-M366B, Android 16, arm64): engine reply, takeback, hint, resign + whole-game review, puzzle reveal, repertoire/stats/settings screens, live pack catalog refresh + 5000-puzzle install, backup/restore on an on-device sqlite file.
 
 ## Owner phone (release build, manual via adb)

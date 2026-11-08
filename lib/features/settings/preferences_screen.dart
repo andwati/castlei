@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/ui/widgets.dart';
+
 import '../../core/storage/repository.dart';
 import '../../core/engine/engine.dart';
 
@@ -76,16 +78,22 @@ class _PreferencesState extends State<PreferencesScreen> {
         : ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              for (final e in {
-                'sound': 'Move sound',
-                'haptics': 'Move haptics',
-                'coordinates': 'Board coordinates',
-              }.entries)
-                SwitchListTile(
-                  title: Text(e.value),
-                  value: values[e.key],
-                  onChanged: (v) => save(e.key, v),
-                ),
+              const SectionLabel('Feedback'),
+              GroupCard(
+                children: [
+                  for (final e in {
+                    'sound': 'Move sound',
+                    'haptics': 'Move haptics',
+                    'coordinates': 'Board coordinates',
+                  }.entries)
+                    SwitchListTile(
+                      title: Text(e.value),
+                      value: values[e.key],
+                      onChanged: (v) => save(e.key, v),
+                    ),
+                ],
+              ),
+              const SectionLabel('Analysis'),
               choice(
                 'analysisMs',
                 'Default analysis budget',
@@ -102,12 +110,19 @@ class _PreferencesState extends State<PreferencesScreen> {
                 [1, 2, 3],
                 ['One', 'Two', 'Three'],
               ),
+              const SectionLabel('Engine'),
               choice(
                 'resources',
                 'Engine resources',
                 [1, 2],
                 ['1 thread · 64 MB', '2 threads · 128 MB'],
               ),
+              const FeedbackCard(
+                'More engine resources can increase heat and battery use. Search budgets apply to each search, not the entire review.',
+                tone: Tone.info,
+                icon: Icons.thermostat_outlined,
+              ),
+              const SectionLabel('Opening drills'),
               choice(
                 'dueLimit',
                 'Due positions per session',
@@ -119,9 +134,6 @@ class _PreferencesState extends State<PreferencesScreen> {
                 'New positions per session',
                 [0, 5, 10],
                 ['None', '5', '10'],
-              ),
-              const Text(
-                'More engine resources can increase heat and battery use. Search budgets apply to each search, not the entire review.',
               ),
             ],
           ),
