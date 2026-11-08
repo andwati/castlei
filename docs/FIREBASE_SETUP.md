@@ -2,10 +2,16 @@
 
 Done from the command line already: Android app registered with the release + debug SHA fingerprints, storage rules written (`storage.rules`), App Distribution group `owner` created and the first signed build uploaded.
 
-## You still need to do these in the Firebase console
-1. **Authentication → Sign-in method:** enable **Google** (and **Apple** for iOS). Then run `./tool/refresh_firebase_config.sh` and rebuild. This pulls the OAuth client IDs into `google-services.json` and `GoogleService-Info.plist` and adds the iOS URL scheme.
-2. **Storage → Get started:** choose a location (cannot be changed later) and the pay-as-you-go plan that Firebase now requires for Storage buckets. Then deploy the rules: `firebase deploy --only storage --project castlei`. Until this is done "Back up now" reports that cloud storage is not set up.
-3. **App Distribution:** add yourself to the `owner` group (Testers & groups) and install the tester app / open the invite on your phone.
+## Already done
+- Google and Apple sign-in providers enabled; the current `google-services.json` / `GoogleService-Info.plist` contain the OAuth clients (refresh any time with `./tool/refresh_firebase_config.sh`, which also adds the iOS Google URL scheme).
+- Apple on Android uses Firebase's web flow with the Services ID return URL `https://castlei.firebaseapp.com/__/auth/handler`; on iOS it uses the native flow.
+- **Cloud backup uses Firestore** (free plan; Storage needs a paid plan). Database `(default)` created in `nam5`, security rules deployed from `firestore.rules`: each user can only read/write `users/{uid}/backups/**`. Backups are split into ~700 KB chunks (max 12 MB per backup), the metadata document is written last, restore verifies size and SHA-256. Redeploy rules with `firebase deploy --only firestore --project castlei`.
+- App Distribution group `owner` exists and you are a tester.
+
+## Still to do in the Firebase console
+1. **Apple provider (iOS):** make sure the Apple Services ID, Team ID and key are saved in Authentication → Sign-in method → Apple.
+2. **App Check / API key restrictions** (optional hardening, see item 8 below).
+3. *(Storage is no longer used; no billing needed.)*
 4. **Remote Config:** add these parameters (the app works with the defaults if you skip this) and publish:
 
 | Parameter | Default | Effect |

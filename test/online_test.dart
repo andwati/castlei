@@ -2,6 +2,10 @@ import 'package:castlei/core/cloud/cloud_backup.dart';
 import 'package:castlei/core/cloud/remote_config.dart';
 import 'package:castlei/core/diagnostics/analytics.dart';
 import 'package:castlei/core/notifications/notifications.dart';
+
+import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -108,5 +112,54 @@ void main() {
     expect(RemoteSettings.cloudBackupEnabled, isTrue);
     expect(RemoteSettings.remindersEnabled, isTrue);
     expect(RemoteSettings.announcementText, isEmpty);
+  });
+
+  group('chunked cloud backup', () {
+    Uint8List sample(int n) =>
+        Uint8List.fromList([for (var i = 0; i < n; i++) i % 251]);
+
+    test('splits into bounded chunks and reassembles exactly', () {
+      for (final n in [
+        0,
+        1,
+        700 * 1024 - 1,
+        700 * 1024,
+        700 * 1024 + 1,
+        3 * 700 * 1024 + 17,
+      ]) {
+        final data = sample(n);
+        final chunks = splitChunks(data);
+        expect(chunks.every((c) => c.length <= CloudBackup.chunkSize), isTrue);
+        expect(chunks.fold<int>(0, (a, c) => a + c.length), n);
+        final joined = joinChunks(
+          chunks,
+          bytes: n,
+          sha256Hex: sha256.convert(data).toString(),
+        );
+        expect(joined, data);
+      }
+      // Each chunk stays comfortably under Firestore's 1 MiB document limit.
+      expect(CloudBackup.chunkSize, lessThan(800 * 1024));
+    });
+
+    test('a truncated or tampered backup is rejected, never restored', () {
+      final data = sample(2 * CloudBackup.chunkSize + 5);
+      final chunks = splitChunks(data);
+      final hash = sha256.convert(data).toString();
+      expect(
+        () => joinChunks(
+          chunks.take(2).toList(),
+          bytes: data.length,
+          sha256Hex: hash,
+        ),
+        throwsStateError,
+      );
+      final tampered = [for (final c in chunks) Uint8List.fromList(c)];
+      tampered[1][3] ^= 0xff;
+      expect(
+        () => joinChunks(tampered, bytes: data.length, sha256Hex: hash),
+        throwsStateError,
+      );
+    });
   });
 }

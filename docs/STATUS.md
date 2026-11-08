@@ -20,7 +20,7 @@
 
 ## Online features (accounts, cloud backup, analytics, messaging, remote config)
 - Built and running on the owner phone: Settings → Account (Google; Apple on iOS), automatic cloud backup logic (after finished games and daily, Wi-Fi only, last 5 versions, restore from cloud), usage analytics (default on, switchable), local reminders (due drills, daily puzzle, unfinished game; the system alarm for the daily puzzle was confirmed on the phone, and the test notification was delivered), FCM announcements topic, Remote Config (engine caps, kill switches, announcement card), In-App Messaging (suppressed during games), app shortcuts, predictive back.
-- **Not yet live because they need console steps** (see `docs/FIREBASE_SETUP.md`): Google/Apple sign-in providers, Storage bucket and rules deployment, Remote Config parameters, APNs key. Sign-in, cloud upload/restore and delivery of push and analytics events have therefore **not been exercised end to end**.
+- Google and Apple sign-in are enabled in Firebase and the configs contain the OAuth clients. Cloud backup was moved from Storage (paid plan) to **Firestore** (free): database created in `nam5`, rules deployed, chunking/integrity logic unit-tested. **Not yet exercised end to end on a device**: sign-in, cloud upload/restore, and delivery of push and analytics events (the phone was locked when I tried). Remote Config parameters and the iOS APNs key are still optional console steps.
 - Release signing key generated (gitignored; back it up, see `docs/RELEASE.md`); first signed build uploaded to Firebase App Distribution (group `owner`, no testers yet); CI release workflow written (needs repository secrets).
 - Unit tests cover reminder timing, backup retention, analytics bucketing, remote-config clamping.
 

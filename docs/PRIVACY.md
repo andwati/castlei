@@ -4,7 +4,7 @@ Castlei keeps your games, studies, drills and statistics in a local database on 
 
 | Data | When | Where | Control |
 |---|---|---|---|
-| Full backup archive (games, analysis, repertoires, history, preferences) | Only if you sign in and automatic backup is on, or you tap "Back up now" | Your private folder in Firebase Storage, last 5 versions, readable only by you | Settings → Account: switch off, sign out, or delete the account and all cloud backups |
+| Full backup archive (games, analysis, repertoires, history, preferences) | Only if you sign in and automatic backup is on, or you tap "Back up now" | Your private area in Cloud Firestore (chunked), last 5 versions, readable only by you | Settings → Account: switch off, sign out, or delete the account and all cloud backups |
 | Sign-in identity (Google / Apple account id, email) | If you sign in | Firebase Authentication | Delete account |
 | Crash reports (app and engine version, error type, scrubbed message, stack trace) | Default on | Firebase Crashlytics | Settings → Privacy and diagnostics |
 | Performance timings (startup, engine speed, import/backup durations, frame counts) | Default on | Firebase Performance | same |

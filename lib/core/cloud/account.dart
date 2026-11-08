@@ -18,7 +18,9 @@ class AccountService extends ChangeNotifier {
   bool _googleReady = false;
   User? get user => available ? FirebaseAuth.instance.currentUser : null;
   bool get signedIn => user != null;
-  bool get appleSupported => Platform.isIOS || Platform.isMacOS;
+  // iOS uses the native Apple flow; Android uses Firebase's web flow
+  // (needs the Services ID return URL https://<project>.firebaseapp.com/__/auth/handler).
+  bool get appleSupported => Platform.isIOS || Platform.isAndroid;
 
   String get label {
     final u = user;
@@ -66,6 +68,25 @@ class AccountService extends ChangeNotifier {
 
   Future<String?> signInWithApple() async {
     if (!available) return 'Accounts are not available in this build.';
+    if (Platform.isAndroid) {
+      try {
+        await FirebaseAuth.instance.signInWithProvider(
+          AppleAuthProvider()
+            ..addScope('email')
+            ..addScope('name'),
+        );
+        return null;
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'web-context-canceled' ||
+            e.code == 'canceled' ||
+            e.code == 'popup-closed-by-user') {
+          return null;
+        }
+        return 'Apple sign-in failed (${e.code}). Check the Apple provider settings in Firebase Authentication.';
+      } catch (e) {
+        return 'Sign-in failed: $e';
+      }
+    }
     try {
       final raw = _nonce();
       final apple = await SignInWithApple.getAppleIDCredential(
