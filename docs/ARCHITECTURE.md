@@ -23,3 +23,5 @@ A repertoire is a study game plus a side. Cards are keyed per canonical position
 
 ## Diagnostics
 `lib/core/diagnostics/crash.dart`: Firebase init runs unawaited with a 10 s timeout so it can never delay the first frame; global Flutter/platform/isolate error handlers report sanitized errors when enabled. The app works fully without Firebase.
+
+Performance monitoring lives in `lib/core/diagnostics/perf.dart` (`Perf.trace`, `Perf.record`, frame statistics); it shares the Firebase initialization above and is controlled by the `perfMonitoring` preference.

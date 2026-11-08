@@ -9,6 +9,7 @@ import 'package:castlei/core/storage/repository.dart';
 import 'package:castlei/core/storage/backup.dart';
 import 'package:castlei/features/puzzles/training.dart';
 import 'package:castlei/core/diagnostics/crash.dart';
+import 'package:castlei/core/diagnostics/perf.dart';
 
 void main() {
   test('PGN branches and comments survive storage and backup', () async {
@@ -149,4 +150,13 @@ void main() {
       await db.close();
     },
   );
+  test('performance tracing is transparent when monitoring is off', () async {
+    expect(Perf.enabled, isFalse);
+    expect(await Perf.trace('x', () async => 42), 42);
+    await expectLater(
+      Perf.trace('x', () async => throw StateError('boom')),
+      throwsStateError,
+    );
+    await Perf.record('x', metrics: {'ms': 1}); // must not throw
+  });
 }

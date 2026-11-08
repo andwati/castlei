@@ -98,24 +98,29 @@ class BackupService {
       }
       final check = await staging.rows('PRAGMA foreign_key_check');
       if (check.isNotEmpty) throw FormatException('Broken backup references');
-      // Crash-report choice belongs to this device, not to the backup.
-      final deviceChoice = await db.rows(
-        'SELECT value FROM preferences WHERE "key"=?',
-        ['crashReports'],
-      );
+      // Diagnostics choices belong to this device, not to the backup.
+      const deviceKeys = ['crashReports', 'perfMonitoring'];
+      final deviceChoices = <String, Object?>{};
+      for (final key in deviceKeys) {
+        final rows = await db.rows(
+          'SELECT value FROM preferences WHERE "key"=?',
+          [key],
+        );
+        if (rows.isNotEmpty) deviceChoices[key] = rows.first['value'];
+      }
       await db.transaction(() async {
         for (final table in backupTables.reversed) {
           await db.execute('DELETE FROM $table');
         }
         await _insert(db, payload);
-        await db.execute('DELETE FROM preferences WHERE "key"=?', [
-          'crashReports',
-        ]);
-        if (deviceChoice.isNotEmpty) {
-          await db.execute('INSERT INTO preferences VALUES(?,?)', [
-            'crashReports',
-            deviceChoice.first['value'],
-          ]);
+        for (final key in deviceKeys) {
+          await db.execute('DELETE FROM preferences WHERE "key"=?', [key]);
+          if (deviceChoices.containsKey(key)) {
+            await db.execute('INSERT INTO preferences VALUES(?,?)', [
+              key,
+              deviceChoices[key],
+            ]);
+          }
         }
       });
     } finally {

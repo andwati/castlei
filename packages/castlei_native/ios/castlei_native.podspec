@@ -7,16 +7,18 @@ Pod::Spec.new do |s|
   s.license = { :file => '../../../LICENSE', :type => 'GPL-3.0' }
   s.author = { 'Castlei' => 'Castlei' }
   s.source = { :path => '.' }
-  s.source_files = '../../../native/adapter.cpp', '../../../native/stockfish/src/**/*.{h,cpp}'
-  s.exclude_files = '../../../native/stockfish/src/main.cpp'
-  s.preserve_paths = '../../../native/stockfish/src/*.nnue'
+  # Forwarder files include the real sources in place (CocoaPods cannot reliably
+  # glob outside the pod directory). Regenerate with tool/gen_ios_forwarders.sh.
+  s.source_files = 'Classes/**/*.{cpp,h}'
   s.dependency 'Flutter'
   s.platform = :ios, '16.0'
   s.pod_target_xcconfig = {
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
     'GCC_ENABLE_CPP_EXCEPTIONS' => 'YES',
+    'GCC_ENABLE_CPP_RTTI' => 'YES',
+    # The embedded NNUE networks are pulled in with .incbin, resolved via this path.
     'HEADER_SEARCH_PATHS' => '$(inherited) "${PODS_TARGET_SRCROOT}/../../../native/stockfish/src"',
-    'OTHER_CPLUSPLUSFLAGS' => '$(inherited) -O3',
+    'OTHER_CPLUSPLUSFLAGS' => '$(inherited) -O3 -fexceptions -frtti',
     'DEFINES_MODULE' => 'YES'
   }
 end

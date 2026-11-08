@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
 import '../../core/storage/repository.dart';
+import '../../core/diagnostics/perf.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 
@@ -41,6 +42,7 @@ class _PackState extends State<PackScreen> {
       return;
     }
     setState(() => busy = true);
+    final timer = Stopwatch()..start();
     try {
       final uri = Uri.parse(base);
       if (uri.scheme != 'https') throw FormatException('HTTPS required');
@@ -54,6 +56,10 @@ class _PackState extends State<PackScreen> {
       packs = data['packs'];
       await widget.repo.setPreference('catalog', packs);
       status = 'Catalog refreshed';
+      Perf.record(
+        'catalog_refresh',
+        metrics: {'ms': timer.elapsedMilliseconds, 'packs': packs.length},
+      );
     } catch (e) {
       status = '$e';
     }
@@ -66,6 +72,7 @@ class _PackState extends State<PackScreen> {
       status = 'Downloading ${pack['title']}…';
     });
     final client = http.Client();
+    final timer = Stopwatch()..start();
     try {
       final uri = Uri.parse(base).resolve(pack['url']);
       if (uri.scheme != 'https') throw FormatException('HTTPS required');
@@ -131,6 +138,14 @@ class _PackState extends State<PackScreen> {
         );
       });
       status = 'Installed ${rows.length} puzzles';
+      Perf.record(
+        'pack_install',
+        metrics: {
+          'ms': timer.elapsedMilliseconds,
+          'puzzles': rows.length,
+          'kb': bytes.length ~/ 1024,
+        },
+      );
     } catch (e) {
       status = 'Installation failed: $e';
     } finally {

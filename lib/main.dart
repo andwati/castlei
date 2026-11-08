@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'core/diagnostics/crash.dart';
+import 'core/diagnostics/perf.dart';
 
 import 'core/chess/model.dart';
 import 'core/storage/database.dart' show AppDatabase;
@@ -29,12 +30,27 @@ import 'features/statistics/statistics.dart';
 import 'features/settings/preferences_screen.dart';
 
 Future<void> main() async {
+  final startup = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final dir = await getApplicationSupportDirectory();
   final repo = Repository(AppDatabase(io.File('${dir.path}/castlei.sqlite')));
   // Never let Firebase delay or block the first frame.
-  unawaited(CrashReporting.start(repo));
+  var firstFrameMs = -1;
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => firstFrameMs = startup.elapsedMilliseconds,
+  );
+  unawaited(
+    CrashReporting.start(repo).then((_) async {
+      if (!CrashReporting.available) return;
+      await Perf.start(repo);
+      // Dart-side time from process entry to the first rendered frame.
+      for (var i = 0; i < 50 && firstFrameMs < 0; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      await Perf.record('first_frame', metrics: {'ms': firstFrameMs});
+    }),
+  );
   if ((await repo.db.rows('SELECT id FROM puzzles LIMIT 1')).isEmpty) {
     final puzzles = jsonDecode(
       await rootBundle.loadString('assets/puzzles/starter.json'),
@@ -344,6 +360,7 @@ class _HomeState extends State<HomeShell> {
       allowedExtensions: ['pgn'],
     );
     if (file == null) return;
+    final importTimer = Stopwatch()..start();
     final bytes = await file.readAsBytes();
     if (bytes.length > 20 * 1024 * 1024) {
       throw const FormatException('PGN exceeds 20 MB');
@@ -370,6 +387,16 @@ class _HomeState extends State<HomeShell> {
         errors.add('Game ${i + 1}: $e');
       }
     }
+    Perf.record(
+      'pgn_import',
+      metrics: {
+        'ms': importTimer.elapsedMilliseconds,
+        'games': games.length,
+        'imported': imported,
+        'rejected': errors.length,
+        'kb': bytes.length ~/ 1024,
+      },
+    );
     if (mounted) {
       setState(() {});
       await showDialog(
@@ -393,7 +420,11 @@ class _HomeState extends State<HomeShell> {
   }
 
   Future<void> backup() async {
-    final bytes = await BackupService(widget.repo.db).export();
+    final bytes = await Perf.trace(
+      'backup_export',
+      () => BackupService(widget.repo.db).export(),
+      metrics: (b) => {'kb': b.length ~/ 1024},
+    );
     await FilePicker.saveFile(
       dialogTitle: 'Unencrypted backup — store privately',
       fileName: 'castlei-backup.zip',
@@ -435,8 +466,13 @@ class _HomeState extends State<HomeShell> {
     );
     if (yes == true) {
       widget.engine.cancel();
-      await BackupService(widget.repo.db).restore(bytes);
+      await Perf.trace(
+        'backup_restore',
+        () => BackupService(widget.repo.db).restore(bytes),
+        metrics: (_) => {'kb': bytes.length ~/ 1024},
+      );
       await CrashReporting.applyPreference(widget.repo);
+      await Perf.applyPreference(widget.repo);
       if (mounted) setState(() {});
     }
   }
@@ -1040,6 +1076,7 @@ class _HomeState extends State<HomeShell> {
       await widget.repo.preference('theme', 'system') as String,
     );
     var crash = await widget.repo.preference('crashReports', true) as bool;
+    var perf = await widget.repo.preference('perfMonitoring', true) as bool;
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -1130,6 +1167,26 @@ class _HomeState extends State<HomeShell> {
                               );
                               await CrashReporting.setEnabled(v);
                               update(() => crash = v);
+                            })
+                          : null,
+                    ),
+                    SwitchListTile(
+                      secondary: const Icon(Icons.speed_rounded),
+                      title: const Text('Performance monitoring'),
+                      subtitle: Text(
+                        Perf.available
+                            ? 'On by default. Sends anonymous timings (startup, engine speed, imports, frame rate) to find slow spots. No games, positions or personal data.'
+                            : 'Performance monitoring is not available in this build.',
+                      ),
+                      value: perf && Perf.available,
+                      onChanged: Perf.available
+                          ? (v) => guard(() async {
+                              await widget.repo.setPreference(
+                                'perfMonitoring',
+                                v,
+                              );
+                              await Perf.setEnabled(v);
+                              update(() => perf = v);
                             })
                           : null,
                     ),

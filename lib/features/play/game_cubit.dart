@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dartchess/dartchess.dart';
 
 import '../../core/chess/model.dart';
+import '../../core/diagnostics/perf.dart';
 import '../../core/engine/engine.dart';
 import '../../core/storage/repository.dart';
 
@@ -347,6 +348,7 @@ class GameCubit extends Cubit<GameView> {
     final nodes = game.mainline;
     var done = 0;
     final config = 'sf18-v1-$milliseconds';
+    final reviewTimer = Stopwatch()..start();
     try {
       for (final n in nodes) {
         if (token != epoch || isClosed) return;
@@ -361,6 +363,7 @@ class GameCubit extends Cubit<GameView> {
           done++;
           continue;
         }
+        final moveTimer = Stopwatch()..start();
         final path = game.path(n.parent).map((e) => e.uci).toList();
         final best = await engine.search(
           fen: game.rootFen,
@@ -388,8 +391,19 @@ class GameCubit extends Cubit<GameView> {
             ),
           ]);
         }
+        Perf.record(
+          'review_move',
+          metrics: {
+            'ms': moveTimer.elapsedMilliseconds,
+            'budget_ms': milliseconds,
+          },
+        );
         done++;
       }
+      Perf.record(
+        'review_game',
+        metrics: {'ms': reviewTimer.elapsedMilliseconds, 'moves': nodes.length},
+      );
       emit(GameView(reviewDone: done, reviewTotal: nodes.length));
     } catch (e) {
       if (!isClosed) {

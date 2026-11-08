@@ -1,9 +1,12 @@
 import 'dart:async';
+
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
+
+import '../diagnostics/perf.dart';
 
 class EngineLine {
   const EngineLine({
@@ -63,7 +66,11 @@ class EngineClient {
   Future<void> _tail = Future.value();
   int _generation = 0;
   bool _disposed = false;
-  Future<void> initialize() => _initialization ??= _initialize();
+  Future<void> initialize() => _initialization ??= () async {
+    final sw = Stopwatch()..start();
+    await _initialize();
+    Perf.record('engine_init', metrics: {'ms': sw.elapsedMilliseconds});
+  }();
   Future<void> _initialize() async {
     final ready = Completer<SendPort>();
     _port = ReceivePort();
@@ -144,11 +151,32 @@ class EngineClient {
         send(
           'position fen $fen${moves.isEmpty ? '' : ' moves ${moves.join(' ')}'}',
         );
+        final searchTimer = Stopwatch()..start();
         send(
           'go movetime $milliseconds${onlyMove == null ? '' : ' searchmoves $onlyMove'}',
         );
         final best = await done.future.timeout(
           Duration(milliseconds: milliseconds + 15000),
+        );
+        Perf.record(
+          'engine_search',
+          attributes: {
+            'budget': milliseconds <= 1000
+                ? 'le1s'
+                : milliseconds <= 3000
+                ? 'le3s'
+                : 'gt3s',
+            'lines': '$multiPv',
+          },
+          metrics: {
+            'requested_ms': milliseconds,
+            'actual_ms': searchTimer.elapsedMilliseconds,
+            'overhead_ms': searchTimer.elapsedMilliseconds - milliseconds,
+            'depth': lines.values.fold<int>(
+              0,
+              (m, l) => l.depth > m ? l.depth : m,
+            ),
+          },
         );
         if (generation != _generation) throw SearchCanceled();
         final sorted = lines.values.toList()
@@ -177,6 +205,14 @@ class EngineClient {
   }
 }
 
+/// iOS: the engine pod is linked into the app. Look it up in the running
+/// process first, then fall back to the dynamic framework CocoaPods builds.
+DynamicLibrary _openIosLibrary() {
+  final process = DynamicLibrary.process();
+  if (process.providesSymbol('castlei_create')) return process;
+  return DynamicLibrary.open('castlei_native.framework/castlei_native');
+}
+
 void _worker(List<Object> args) {
   final output = args[0] as SendPort;
   final path = args[1] as String;
@@ -184,7 +220,7 @@ void _worker(List<Object> args) {
   output.send(input.sendPort);
   try {
     final lib = path == 'process'
-        ? DynamicLibrary.process()
+        ? _openIosLibrary()
         : DynamicLibrary.open(path);
     final create = lib
         .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(

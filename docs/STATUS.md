@@ -12,11 +12,16 @@
 - Not yet done: long sustained review heat test, screen reader / large text / reduced motion, audio and haptics, pack cancel/retry/remove by hand, backup/restore via the file picker UI.
 
 ## Other
-- iOS: configuration present, **unverified** (no Mac/iPhone). Not mentioned in the app UI.
+- iOS: fully configured (engine pod, Firebase, icons, Podfile, CI workflow) but **unbuilt and unverified**; see `docs/IOS.md`. Not mentioned in the app UI.
 - External config still required: release signing, Firebase config (currently falls back cleanly), public catalog (default URL is live).
 
 ## Full game on the owner phone
 `integration_test/full_game_test.dart` plays a complete game against the app's Medium engine purely by tapping the board (own moves from a second full-strength Stockfish): finished 1-0 by checkmate in 77 plies, including castling; check glow, last-move highlight and result card verified on screen.
+
+## Performance monitoring (Firebase Performance)
+- Android and iOS configured (Gradle `firebase-perf` plugin, iOS via the Firebase SDK); on by default and switchable in Settings; debug runs never report; Firebase's automatic app-start/network traces are on natively.
+- Custom traces (`lib/core/diagnostics/perf.dart`) carry only names, timings and counts: `first_frame`, `engine_init`, `engine_search` (requested vs actual ms, overhead, depth), `review_move`, `review_game`, `pgn_import`, `backup_export`, `backup_restore`, `catalog_refresh`, `pack_install`, and `frames` (total/slow/frozen frames, flushed when the app is backgrounded).
+- Verified: builds and runs on the phone and the unit test confirms tracing is transparent when off. Arrival of traces in the Firebase console has not been confirmed from here.
 
 ## Crash reporting (Firebase Crashlytics)
 - Android configured (`google-services.json`, kept out of git; CI uses the `GOOGLE_SERVICES_JSON` base64 secret or a placeholder). `lib/firebase_options.dart` covers Android and iOS; iOS is untested.

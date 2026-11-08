@@ -7,4 +7,4 @@ if [ ! -d native/stockfish/.git ]; then
 fi
 test "$(git -C native/stockfish rev-parse HEAD)" = "$revision"
 make -C native/stockfish/src net
-sha256sum native/stockfish/src/*.nnue
+if command -v sha256sum >/dev/null; then sha256sum native/stockfish/src/*.nnue; else shasum -a 256 native/stockfish/src/*.nnue; fi
