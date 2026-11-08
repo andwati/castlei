@@ -1,0 +1,10 @@
+Castlei is GPL-3.0.
+Stockfish 18: Copyright Stockfish developers, GPL-3.0-or-later.
+Source: https://github.com/official-stockfish/Stockfish/tree/cb3d4ee9b47d0c5aae855b12379378ea1439675c
+Native adapter: Castlei contributors, GPL-3.0.
+Chess piece SVGs: Colin M. L. Burnett, GPL-2.0-or-later (used under GPL-3.0).
+Source: https://github.com/lichess-org/lila/tree/master/public/piece/cburnett
+License evidence: docs/LILA_ASSET_LICENSE.md.
+Puzzles: Lichess open database, CC0-1.0, https://database.lichess.org/.
+The bundled dataset is a deterministically selected validated subset of a downloaded CSV prefix. See docs/PUZZLE_PROVENANCE.json.
+Dart chess rules: lichess-org/dartchess, GPL-3.0.
