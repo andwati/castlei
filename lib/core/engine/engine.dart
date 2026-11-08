@@ -16,8 +16,10 @@ class EngineLine {
     required this.pv,
     this.index = 1,
     this.bounded = false,
+    this.nodes = 0,
+    this.nps = 0,
   });
-  final int depth, score, index;
+  final int depth, score, index, nodes, nps;
   final bool mate, bounded;
   final List<String> pv;
   static EngineLine? parse(String s) {
@@ -32,6 +34,11 @@ class EngineLine {
       mate: score.group(1) == 'mate',
       index: value('multipv', 1),
       bounded: s.contains('bound'),
+      nodes: value('nodes', 0),
+      nps: value(
+        'nps',
+        value('time', 0) > 0 ? value('nodes', 0) * 1000 ~/ value('time', 0) : 0,
+      ),
       pv: s.contains(' pv ') ? s.split(' pv ').last.trim().split(' ') : [],
     );
   }
@@ -176,6 +183,9 @@ class EngineClient {
               0,
               (m, l) => l.depth > m ? l.depth : m,
             ),
+            'knps':
+                lines.values.fold<int>(0, (m, l) => l.nps > m ? l.nps : m) ~/
+                1000,
           },
         );
         if (generation != _generation) throw SearchCanceled();

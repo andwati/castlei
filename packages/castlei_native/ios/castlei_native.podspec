@@ -19,6 +19,9 @@ Pod::Spec.new do |s|
     # The embedded NNUE networks are pulled in with .incbin, resolved via this path.
     'HEADER_SEARCH_PATHS' => '$(inherited) "${PODS_TARGET_SRCROOT}/../../../native/stockfish/src"',
     'OTHER_CPLUSPLUSFLAGS' => '$(inherited) -O3 -fexceptions -frtti',
+    # NEON is baseline on every arm64 iPhone and Apple-silicon simulator; not on Intel simulators.
+    'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) NDEBUG=1',
+    'GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]' => '$(inherited) NDEBUG=1 USE_NEON=8',
     'DEFINES_MODULE' => 'YES'
   }
 end
