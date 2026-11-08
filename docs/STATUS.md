@@ -28,7 +28,7 @@
 - **On by default (owner decision; the original plan said opt-in).** The preference key is `crashReports`, user-switchable in Settings. Restoring a backup keeps this device's own choice. Debug runs never report.
 - Reports are sanitized (`lib/core/diagnostics/crash.dart`): error type plus a scrubbed message with FEN, PGN headers and file paths removed; only app and engine version are attached. Unit-tested.
 - Settings has a "Send a test report" action. The app confirms the SDK accepted it; arrival in the Firebase console has not been confirmed from here, so check the Crashlytics dashboard for a "StateError: Castlei test report" non-fatal.
-- Native (Stockfish) crash symbolication is opt-in: `flutter build apk --release -PuploadNativeSymbols=true`.
+- Native (Stockfish) crash symbolication is opt-in: `ORG_GRADLE_PROJECT_uploadNativeSymbols=true flutter build apk --release`.
 
 # Known limitations / findings
 - Debug builds started from the launcher (not via `flutter run`) hang on the splash screen; use release/profile for standalone installs.

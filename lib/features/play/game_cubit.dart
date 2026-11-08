@@ -6,7 +6,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dartchess/dartchess.dart';
 
 import '../../core/chess/model.dart';
+import '../../core/cloud/cloud_backup.dart';
+import '../../core/cloud/remote_config.dart';
+import '../../core/diagnostics/analytics.dart';
 import '../../core/diagnostics/perf.dart';
+import '../../core/notifications/notifications.dart';
 import '../../core/engine/engine.dart';
 import '../../core/storage/repository.dart';
 
@@ -59,10 +63,28 @@ class GameCubit extends Cubit<GameView> {
 
   Future<void> persist() async {
     if (game.result != '*') {
+      final first = !game.settings.containsKey('completedAt');
       game.settings.putIfAbsent(
         'completedAt',
         () => DateTime.now().millisecondsSinceEpoch,
       );
+      if (first && !study) {
+        final human = game.settings['side'] == 'black' ? '0-1' : '1-0';
+        Analytics.log('game_finished', {
+          'result': game.result == '1/2-1/2'
+              ? 'draw'
+              : game.result == human
+              ? 'win'
+              : 'loss',
+          'reason': '${game.settings['reason'] ?? 'other'}',
+          'assisted': game.assisted ? 'yes' : 'no',
+          'length': Analytics.bucket(game.nodes.length ~/ 2),
+          'difficulty': '${game.settings['level'] ?? ''}',
+        });
+        Notifications.cancelResume();
+        Notifications.maybePromptOnce(repo);
+        CloudBackup.scheduleSoon();
+      }
     }
     game.settings['whiteMs'] = white;
     game.settings['blackMs'] = black;
@@ -229,7 +251,7 @@ class GameCubit extends Cubit<GameView> {
       final remaining = game.position.turn == Side.white ? white : black;
       final ms = timed
           ? min(
-              2000,
+              RemoteSettings.engineMaxMsTimed,
               max(
                 1,
                 min(
@@ -239,7 +261,7 @@ class GameCubit extends Cubit<GameView> {
                 ),
               ),
             )
-          : 1000;
+          : RemoteSettings.engineMaxMsUntimed;
       final result = await engine.search(
         fen: game.rootFen,
         moves: game.path(game.current).map((e) => e.uci).toList(),
@@ -287,6 +309,7 @@ class GameCubit extends Cubit<GameView> {
     game.result = '*';
     game.assisted = true;
     await persist();
+    Analytics.log('takeback_used');
     emit(const GameView());
   }
 
@@ -323,6 +346,7 @@ class GameCubit extends Cubit<GameView> {
     await pause();
     game.assisted = true;
     await persist();
+    Analytics.log('hint_used');
     try {
       final r = await engine.search(
         fen: game.rootFen,
@@ -344,6 +368,7 @@ class GameCubit extends Cubit<GameView> {
 
   Future<void> review(int milliseconds) async {
     engine.cancel();
+    Analytics.log('review_started', {'budget_ms': milliseconds});
     final token = ++epoch;
     final nodes = game.mainline;
     var done = 0;

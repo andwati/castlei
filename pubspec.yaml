@@ -54,6 +54,20 @@ dependencies:
   firebase_core: ^5.1.0
   firebase_crashlytics: ^6.0.1
   firebase_performance: ^0.12.1
+  firebase_auth: ^7.0.1
+  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^8.2.0
+  firebase_storage: ^14.0.1
+  firebase_analytics: ^13.0.1
+  firebase_messaging: ^17.0.1
+  firebase_remote_config: ^7.0.1
+  firebase_in_app_messaging: ^0.10.1
+  flutter_local_notifications: ^23.0.0
+  timezone: ^0.11.2
+  flutter_timezone: ^5.1.1
+  connectivity_plus: ^7.3.2
+  audioplayers: ^6.8.1
+  quick_actions: ^1.1.1
 
 dev_dependencies:
   flutter_test:

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../core/diagnostics/analytics.dart';
+import '../../core/notifications/notifications.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 
@@ -48,6 +50,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     flipped = widget.game.settings['side'] == 'black';
     WidgetsBinding.instance.addObserver(this);
     loadPreferences();
+    Notifications.cancelResume();
+    // Don't interrupt a game with in-app announcements.
+    Analytics.suppressMessages(true);
+    Analytics.screen(widget.study ? 'analysis' : 'game');
   }
 
   Future<void> loadPreferences() async {
@@ -79,6 +85,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     cubit.close();
+    Analytics.suppressMessages(false);
+    if (!widget.study && widget.game.result == '*') {
+      Notifications.scheduleResume(widget.repo, widget.game.id);
+    }
     super.dispose();
   }
 

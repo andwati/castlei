@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Each signed-in user can only touch their own backups.
+    match /users/{uid}/backups/{file} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+                            && request.auth.uid == uid
+                            && request.resource.size < 250 * 1024 * 1024
+                            && request.resource.contentType == 'application/zip';
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -9,12 +11,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keyProps = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.andwati.castlei"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = "28.2.13676358"
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -37,14 +45,24 @@ android {
 
     externalNativeBuild { cmake { path = file("../../native/CMakeLists.txt"); version = "3.22.1" } }
 
+    signingConfigs {
+        if (keyProps.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = rootProject.file(keyProps.getProperty("storeFile"))
+                storePassword = keyProps.getProperty("storePassword")
+                keyAlias = keyProps.getProperty("keyAlias")
+                keyPassword = keyProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Release key when android/key.properties exists (gitignored), debug key otherwise (CI without secrets).
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             // Native (Stockfish adapter) crash symbolication. Off by default because
             // the unstripped libraries are large; enable for real releases with
-            //   flutter build apk --release -PuploadNativeSymbols=true
+            //   ORG_GRADLE_PROJECT_uploadNativeSymbols=true flutter build apk --release
             if (project.hasProperty("uploadNativeSymbols")) {
                 extensions.configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension>("firebaseCrashlytics") {
                     nativeSymbolUploadEnabled = true
@@ -62,4 +80,11 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Same BoM as firebase_core (FirebaseSDKVersion); the in-app messaging plugin exposes
+    // Firebase libraries to the app without a version, so supply it here.
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

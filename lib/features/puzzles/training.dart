@@ -24,19 +24,21 @@ class TrainingService {
     int hints,
     int duration,
     Map<String, dynamic> metadata,
-  ) => repo.db.execute(
-    'INSERT INTO attempts VALUES(?,?,?,?,?,?,?,?)',
-    [
-      newId(),
-      kind,
-      target,
-      DateTime.now().millisecondsSinceEpoch,
-      success ? 1 : 0,
-      hints,
-      duration,
-      jsonEncode(metadata),
-    ].asMap().values.toList(),
-  );
+  ) => repo.db
+      .execute(
+        'INSERT INTO attempts VALUES(?,?,?,?,?,?,?,?)',
+        [
+          newId(),
+          kind,
+          target,
+          DateTime.now().millisecondsSinceEpoch,
+          success ? 1 : 0,
+          hints,
+          duration,
+          jsonEncode(metadata),
+        ].asMap().values.toList(),
+      )
+      .then((_) => repo.touch());
   Future<void> buildCards(ChessGame game, String side) async {
     await repo.save(game);
     final matches = await repo.db.rows(

@@ -13,6 +13,14 @@ import 'package:share_plus/share_plus.dart';
 
 import 'core/diagnostics/crash.dart';
 import 'core/diagnostics/perf.dart';
+import 'core/diagnostics/analytics.dart';
+import 'core/cloud/account.dart';
+import 'core/cloud/cloud_backup.dart';
+import 'core/cloud/remote_config.dart';
+import 'core/notifications/notifications.dart';
+import 'features/settings/settings_screen.dart';
+
+import 'package:quick_actions/quick_actions.dart';
 
 import 'core/chess/model.dart';
 import 'core/storage/database.dart' show AppDatabase;
@@ -27,7 +35,6 @@ import 'features/puzzles/training_screen.dart';
 import 'features/puzzles/training.dart';
 import 'features/puzzles/packs.dart';
 import 'features/statistics/statistics.dart';
-import 'features/settings/preferences_screen.dart';
 
 Future<void> main() async {
   final startup = Stopwatch()..start();
@@ -40,17 +47,26 @@ Future<void> main() async {
   WidgetsBinding.instance.addPostFrameCallback(
     (_) => firstFrameMs = startup.elapsedMilliseconds,
   );
-  unawaited(
-    CrashReporting.start(repo).then((_) async {
-      if (!CrashReporting.available) return;
-      await Perf.start(repo);
-      // Dart-side time from process entry to the first rendered frame.
-      for (var i = 0; i < 50 && firstFrameMs < 0; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      }
-      await Perf.record('first_frame', metrics: {'ms': firstFrameMs});
-    }),
-  );
+  unawaited(() async {
+    // Local-only services first; none of this may delay the first frame.
+    await Notifications.start(repo);
+    await CrashReporting.start(repo);
+    if (!CrashReporting.available) return;
+    await Future.wait([
+      Perf.start(repo),
+      Analytics.start(repo),
+      AccountService.instance.start(),
+      RemoteSettings.start(),
+    ]);
+    await Messaging.start(repo);
+    CloudBackup.attach(repo);
+    Analytics.log('app_open');
+    // Dart-side time from process entry to the first rendered frame.
+    for (var i = 0; i < 50 && firstFrameMs < 0; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    await Perf.record('first_frame', metrics: {'ms': firstFrameMs});
+  }());
   if ((await repo.db.rows('SELECT id FROM puzzles LIMIT 1')).isEmpty) {
     final puzzles = jsonDecode(
       await rootBundle.loadString('assets/puzzles/starter.json'),
@@ -138,8 +154,91 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeState();
 }
 
-class _HomeState extends State<HomeShell> {
+class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
+  StreamSubscription<String>? _taps;
+  String _bannerId = '', _bannerText = '';
   int tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _taps = Notifications.taps.stream.listen(_onNotificationTap);
+    _setupShortcuts();
+    // Remote Config arrives asynchronously; check a couple of times early on.
+    for (final seconds in [3, 12]) {
+      Future<void>.delayed(Duration(seconds: seconds), _loadBanner);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _taps?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      Notifications.reschedule(widget.repo);
+      CloudBackup.maybeAutoBackup(reason: 'resume');
+      _loadBanner();
+    }
+  }
+
+  Future<void> _loadBanner() async {
+    final id = RemoteSettings.announcementId;
+    final text = RemoteSettings.announcementText;
+    final seen = await widget.repo.preference('announcementSeen', '') as String;
+    if (!mounted) return;
+    setState(() {
+      _bannerId = id;
+      _bannerText = (text.isEmpty || id == seen) ? '' : text;
+    });
+  }
+
+  Future<void> _dismissBanner() async {
+    await widget.repo.setPreference('announcementSeen', _bannerId);
+    if (mounted) setState(() => _bannerText = '');
+  }
+
+  void _setupShortcuts() {
+    if (!(io.Platform.isAndroid || io.Platform.isIOS)) return;
+    const quick = QuickActions();
+    quick.initialize((type) => _onNotificationTap(type));
+    quick.setShortcutItems(const [
+      ShortcutItem(type: 'resume', localizedTitle: 'Resume game'),
+      ShortcutItem(type: 'puzzle', localizedTitle: 'Daily tactics'),
+    ]);
+  }
+
+  /// Handles notification taps and app-shortcut launches.
+  Future<void> _onNotificationTap(String payload) async {
+    if (!mounted) return;
+    Analytics.log('notification_opened', {'kind': payload.split(':').first});
+    if (payload == 'drills') {
+      await repertoires();
+    } else if (payload == 'puzzle') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => TrainingScreen(repo: widget.repo)),
+      );
+    } else if (payload == 'resume' || payload.startsWith('resume:')) {
+      final games = await widget.repo.games();
+      final id = payload.contains(':') ? payload.split(':')[1] : null;
+      final row = games
+          .where(
+            (r) =>
+                r['source'] == 'engine' &&
+                r['result'] == '*' &&
+                (id == null || r['id'] == id),
+          )
+          .firstOrNull;
+      if (row != null && mounted) await open(await widget.repo.load(row['id']));
+    }
+  }
+
   String search = '';
   bool favorites = false;
   String resultFilter = 'All';
@@ -194,6 +293,8 @@ class _HomeState extends State<HomeShell> {
       ),
     );
   }
+
+  String settingsLevel(ChessGame g) => g.settings['level'] as String;
 
   Future<void> newGame({bool study = false}) async {
     var level = 10;
@@ -351,6 +452,13 @@ class _HomeState extends State<HomeShell> {
       },
     );
     await widget.repo.save(g);
+    Analytics.log(study ? 'study_created' : 'game_started', {
+      if (!study) ...{
+        'difficulty': settingsLevel(g),
+        'timed': base == 0 ? 'no' : 'yes',
+        'custom_position': fen == Chess.initial.fen ? 'no' : 'yes',
+      },
+    });
     if (mounted) await open(g, study: study);
   }
 
@@ -438,7 +546,11 @@ class _HomeState extends State<HomeShell> {
       allowedExtensions: ['zip'],
     );
     if (selected == null) return;
-    final bytes = await selected.readAsBytes();
+    await restoreBytes(await selected.readAsBytes());
+  }
+
+  /// Validates a backup, asks for confirmation, then replaces local data.
+  Future<void> restoreBytes(Uint8List bytes) async {
     final data = BackupService(widget.repo.db).validate(bytes);
     if (!mounted) return;
     final yes = await showDialog<bool>(
@@ -473,6 +585,10 @@ class _HomeState extends State<HomeShell> {
       );
       await CrashReporting.applyPreference(widget.repo);
       await Perf.applyPreference(widget.repo);
+      await Analytics.applyPreference(widget.repo);
+      await Messaging.applyPreference(widget.repo);
+      await Notifications.reschedule(widget.repo);
+      Analytics.log('backup_restored');
       if (mounted) setState(() {});
     }
   }
@@ -497,7 +613,10 @@ class _HomeState extends State<HomeShell> {
     ),
     bottomNavigationBar: NavigationBar(
       selectedIndex: tab,
-      onDestinationSelected: (i) => setState(() => tab = i),
+      onDestinationSelected: (i) {
+        setState(() => tab = i);
+        Analytics.screen(['home', 'play', 'study', 'library'][i]);
+      },
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
         NavigationDestination(
@@ -519,6 +638,18 @@ class _HomeState extends State<HomeShell> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           if (tab == 0) ...[
+            if (_bannerText.isNotEmpty)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.campaign_outlined),
+                  title: Text(_bannerText),
+                  trailing: IconButton(
+                    tooltip: 'Dismiss',
+                    icon: const Icon(Icons.close),
+                    onPressed: _dismissBanner,
+                  ),
+                ),
+              ),
             FutureBuilder(
               future: widget.repo.games(),
               builder: (c, snap) {
@@ -1072,172 +1203,22 @@ class _HomeState extends State<HomeShell> {
   }
 
   Future<void> settings() async {
-    var mode = ThemeMode.values.byName(
+    final mode = ThemeMode.values.byName(
       await widget.repo.preference('theme', 'system') as String,
     );
-    var crash = await widget.repo.preference('crashReports', true) as bool;
-    var perf = await widget.repo.preference('perfMonitoring', true) as bool;
     if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => StatefulBuilder(
-          builder: (context, update) => Scaffold(
-            appBar: AppBar(title: const Text('Settings')),
-            body: ListView(
-              padding: pagePadding(context),
-              children: [
-                const SectionLabel('Appearance'),
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<ThemeMode>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(
-                        value: ThemeMode.system,
-                        icon: Icon(Icons.brightness_auto_outlined),
-                        label: Text('System'),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.light,
-                        icon: Icon(Icons.light_mode_outlined),
-                        label: Text('Light'),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.dark,
-                        icon: Icon(Icons.dark_mode_outlined),
-                        label: Text('Dark'),
-                      ),
-                    ],
-                    selected: {mode},
-                    onSelectionChanged: (v) {
-                      update(() => mode = v.first);
-                      widget.onTheme(mode);
-                      widget.repo.setPreference('theme', mode.name);
-                    },
-                  ),
-                ),
-                const SectionLabel('Practice'),
-                ActionTile(
-                  title: 'Practice preferences',
-                  subtitle: 'Feedback, engine resources, and drill limits',
-                  icon: Icons.tune_rounded,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PreferencesScreen(
-                        repo: widget.repo,
-                        engine: widget.engine,
-                      ),
-                    ),
-                  ),
-                ),
-                const SectionLabel('Your data'),
-                ActionTile(
-                  title: 'Export full backup',
-                  subtitle: 'Unencrypted archive; store it privately',
-                  icon: Icons.backup_rounded,
-                  accent: context.colors.tertiary,
-                  onTap: () => guard(backup),
-                ),
-                ActionTile(
-                  title: 'Restore backup',
-                  subtitle: 'Validate, then replace local data',
-                  icon: Icons.restore_rounded,
-                  accent: context.colors.secondary,
-                  onTap: () => guard(restore),
-                ),
-                const SectionLabel('Privacy'),
-                GroupCard(
-                  children: [
-                    SwitchListTile(
-                      secondary: const Icon(Icons.bug_report_outlined),
-                      title: const Text('Crash reports'),
-                      subtitle: Text(
-                        CrashReporting.available
-                            ? 'On by default. Sends anonymous crash diagnostics (app and engine version, error type, stack trace) so bugs get fixed. Never your games, positions, comments or files. No analytics.'
-                            : 'Crash reporting is not available in this build.',
-                      ),
-                      value: crash && CrashReporting.available,
-                      onChanged: CrashReporting.available
-                          ? (v) => guard(() async {
-                              await widget.repo.setPreference(
-                                'crashReports',
-                                v,
-                              );
-                              await CrashReporting.setEnabled(v);
-                              update(() => crash = v);
-                            })
-                          : null,
-                    ),
-                    SwitchListTile(
-                      secondary: const Icon(Icons.speed_rounded),
-                      title: const Text('Performance monitoring'),
-                      subtitle: Text(
-                        Perf.available
-                            ? 'On by default. Sends anonymous timings (startup, engine speed, imports, frame rate) to find slow spots. No games, positions or personal data.'
-                            : 'Performance monitoring is not available in this build.',
-                      ),
-                      value: perf && Perf.available,
-                      onChanged: Perf.available
-                          ? (v) => guard(() async {
-                              await widget.repo.setPreference(
-                                'perfMonitoring',
-                                v,
-                              );
-                              await Perf.setEnabled(v);
-                              update(() => perf = v);
-                            })
-                          : null,
-                    ),
-                    if (CrashReporting.available && crash)
-                      ListTile(
-                        leading: const Icon(Icons.send_outlined),
-                        title: const Text('Send a test report'),
-                        subtitle: const Text(
-                          'Confirms delivery to your Firebase console.',
-                        ),
-                        onTap: () => guard(() async {
-                          final ok = await CrashReporting.sendTest();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  ok
-                                      ? 'Test report sent'
-                                      : 'Crash reporting is unavailable',
-                                ),
-                              ),
-                            );
-                          }
-                        }),
-                      ),
-                  ],
-                ),
-                const SectionLabel('About'),
-                GroupCard(
-                  children: [
-                    const ListTile(
-                      leading: Icon(Icons.castle_outlined),
-                      title: Text('Castlei 1.0.0'),
-                      subtitle: Text(
-                        'Stockfish 18 · GPL-3.0\nLocal-first. No account required.',
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.description_outlined),
-                      title: const Text('Open-source licenses'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => showLicensePage(
-                        context: context,
-                        applicationName: 'Castlei',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        builder: (_) => SettingsScreen(
+          repo: widget.repo,
+          engine: widget.engine,
+          mode: mode,
+          onTheme: widget.onTheme,
+          onBackup: backup,
+          onRestoreFile: restore,
+          onRestoreBytes: restoreBytes,
+          guard: (a) => guard(a),
         ),
       ),
     );

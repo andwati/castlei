@@ -1,0 +1,5 @@
+// Push notifications and Sign in with Apple need a paid Apple Developer Program
+// membership. Leave this empty for free-account builds; to enable them set:
+//   CASTLEI_ENTITLEMENTS = Runner/Runner.entitlements
+// (see docs/IOS.md).
+CASTLEI_ENTITLEMENTS =

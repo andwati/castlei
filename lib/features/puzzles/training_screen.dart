@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/diagnostics/analytics.dart';
+import '../../core/notifications/notifications.dart';
 import '../../core/ui/board.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
@@ -33,6 +35,7 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    Analytics.screen(opening ? 'drills' : 'puzzles');
     load();
   }
 
@@ -130,6 +133,13 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
         {'rating': items[index]['rating'], 'themes': items[index]['themes']},
       );
     }
+    Analytics.log(opening ? 'drill_completed' : 'puzzle_completed', {
+      'first_attempt': success ? 'yes' : 'no',
+      'hints': hints,
+    });
+    // Reschedule reminders around the new schedule; ask for permission once.
+    Notifications.maybePromptOnce(widget.repo);
+    Notifications.reschedule(widget.repo);
     if (mounted) setState(() {});
   }
 

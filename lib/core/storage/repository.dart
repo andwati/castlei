@@ -1,11 +1,18 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import '../chess/model.dart';
 import 'database.dart';
 
 class Repository {
   Repository(this.db);
   final AppDatabase db;
+
+  /// Bumped whenever user data changes (games, drills, repertoires). Cloud
+  /// backup listens to know when a new backup is worthwhile.
+  final changes = ValueNotifier<int>(0);
+  void touch() => changes.value++;
   Future<void> save(ChessGame g) => db.transaction(() async {
     await db.execute(
       'INSERT INTO games(id,title,source,root_fen,headers,result,created,updated,favorite,settings,current_node,assisted) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,headers=excluded.headers,result=excluded.result,updated=excluded.updated,favorite=excluded.favorite,settings=excluded.settings,current_node=excluded.current_node,assisted=excluded.assisted',
@@ -42,6 +49,7 @@ class Repository {
         ],
       );
     }
+    touch();
   });
   Future<ChessGame> load(String id) async {
     final r = (await db.rows('SELECT * FROM games WHERE id=?', [id])).single;
@@ -91,6 +99,7 @@ class Repository {
       );
     }
     await db.execute('DELETE FROM games WHERE id=?', [id]);
+    touch();
   });
   Future<void> deleteRepertoire(String id) => db.transaction(() async {
     await db.execute(
@@ -98,6 +107,7 @@ class Repository {
       [id],
     );
     await db.execute('DELETE FROM repertoires WHERE id=?', [id]);
+    touch();
   });
   Future<void> setPreference(String key, Object value) => db.execute(
     'INSERT INTO preferences VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
