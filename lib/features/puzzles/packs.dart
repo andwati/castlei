@@ -185,7 +185,7 @@ class _PackState extends State<PackScreen> {
             status.contains('Exception') ||
             status.contains('Error');
         return ListView(
-          padding: const EdgeInsets.all(20),
+          padding: pagePadding(context),
           children: [
             FeedbackCard(
               status,

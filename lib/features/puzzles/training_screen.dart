@@ -177,7 +177,7 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
     body: loading
         ? const Center(child: CircularProgressIndicator())
         : ListView(
-            padding: const EdgeInsets.all(20),
+            padding: pagePadding(context),
             children: [
               if (!opening)
                 Wrap(

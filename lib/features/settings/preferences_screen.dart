@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/ui/theme.dart';
+
 import '../../core/ui/widgets.dart';
 
 import '../../core/storage/repository.dart';
@@ -76,7 +78,7 @@ class _PreferencesState extends State<PreferencesScreen> {
     body: !ready
         ? const Center(child: CircularProgressIndicator())
         : ListView(
-            padding: const EdgeInsets.all(20),
+            padding: pagePadding(context),
             children: [
               const SectionLabel('Feedback'),
               GroupCard(

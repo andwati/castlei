@@ -141,7 +141,7 @@ class _StatsState extends State<StatisticsScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Your progress')),
     body: ListView(
-      padding: const EdgeInsets.all(20),
+      padding: pagePadding(context),
       children: [
         SegmentedButton<int>(
           showSelectedIcon: false,

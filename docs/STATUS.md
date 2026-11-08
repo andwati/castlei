@@ -12,8 +12,18 @@
 - Not yet done: long sustained review heat test, screen reader / large text / reduced motion, audio and haptics, pack cancel/retry/remove by hand, backup/restore via the file picker UI.
 
 ## Other
-- iOS: configuration present, **unverified** (no Mac/iPhone).
+- iOS: configuration present, **unverified** (no Mac/iPhone). Not mentioned in the app UI.
 - External config still required: release signing, Firebase config (currently falls back cleanly), public catalog (default URL is live).
+
+## Full game on the owner phone
+`integration_test/full_game_test.dart` plays a complete game against the app's Medium engine purely by tapping the board (own moves from a second full-strength Stockfish): finished 1-0 by checkmate in 77 plies, including castling; check glow, last-move highlight and result card verified on screen.
+
+## Crash reporting (Firebase Crashlytics)
+- Android configured (`google-services.json`, kept out of git; CI uses the `GOOGLE_SERVICES_JSON` base64 secret or a placeholder). `lib/firebase_options.dart` covers Android and iOS; iOS is untested.
+- **On by default (owner decision; the original plan said opt-in).** The preference key is `crashReports`, user-switchable in Settings. Restoring a backup keeps this device's own choice. Debug runs never report.
+- Reports are sanitized (`lib/core/diagnostics/crash.dart`): error type plus a scrubbed message with FEN, PGN headers and file paths removed; only app and engine version are attached. Unit-tested.
+- Settings has a "Send a test report" action. The app confirms the SDK accepted it; arrival in the Firebase console has not been confirmed from here, so check the Crashlytics dashboard for a "StateError: Castlei test report" non-fatal.
+- Native (Stockfish) crash symbolication is opt-in: `flutter build apk --release -PuploadNativeSymbols=true`.
 
 # Known limitations / findings
 - Debug builds started from the launcher (not via `flutter run`) hang on the splash screen; use release/profile for standalone installs.

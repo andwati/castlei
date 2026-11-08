@@ -41,6 +41,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Native (Stockfish adapter) crash symbolication. Off by default because
+            // the unstripped libraries are large; enable for real releases with
+            //   flutter build apk --release -PuploadNativeSymbols=true
+            if (project.hasProperty("uploadNativeSymbols")) {
+                extensions.configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension>("firebaseCrashlytics") {
+                    nativeSymbolUploadEnabled = true
+                }
+            }
         }
     }
 }

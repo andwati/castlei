@@ -8,6 +8,7 @@ import 'package:castlei/core/storage/database.dart';
 import 'package:castlei/core/storage/repository.dart';
 import 'package:castlei/core/storage/backup.dart';
 import 'package:castlei/features/puzzles/training.dart';
+import 'package:castlei/core/diagnostics/crash.dart';
 
 void main() {
   test('PGN branches and comments survive storage and backup', () async {
@@ -118,6 +119,33 @@ void main() {
       await repo.deleteRepertoire(rep);
       expect(await db.rows('SELECT * FROM cards'), isEmpty);
       expect(await repo.games(), isNotEmpty);
+      await db.close();
+    },
+  );
+  test('crash reports never carry FEN, PGN headers or file paths', () {
+    final e = SanitizedError(
+      FormatException(
+        'bad rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 in /home/ian/.local/share/castlei/game.pgn [Event "My secret study"]',
+      ),
+    );
+    expect(e.toString(), startsWith('FormatException: '));
+    expect(e.message, isNot(contains('rnbqkbnr')));
+    expect(e.message, isNot(contains('/home/ian')));
+    expect(e.message, isNot(contains('secret')));
+    expect(e.message, contains('<fen>'));
+    expect(scrub('x' * 500).length, lessThanOrEqualTo(161));
+  });
+  test(
+    'restore keeps this device crash-report choice, default is on',
+    () async {
+      final db = AppDatabase.memory();
+      final repo = Repository(db);
+      expect(await repo.preference('crashReports', true), true);
+      await repo.setPreference('crashReports', false);
+      final backup = await BackupService(db).export();
+      await repo.setPreference('crashReports', true);
+      await BackupService(db).restore(backup);
+      expect(await repo.preference('crashReports', true), true);
       await db.close();
     },
   );

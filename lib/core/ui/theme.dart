@@ -293,3 +293,16 @@ ThemeData buildTheme(Brightness b) {
     ),
   );
 }
+
+/// Page padding that also clears the system navigation bar / gesture area.
+/// Use for every scrolling page body so content is never hidden behind the
+/// system bars (the app draws edge-to-edge).
+EdgeInsets pagePadding(BuildContext context, [double base = 20]) {
+  final inset = MediaQuery.paddingOf(context);
+  return EdgeInsets.fromLTRB(
+    base + inset.left,
+    base,
+    base + inset.right,
+    base + inset.bottom,
+  );
+}

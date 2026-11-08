@@ -20,3 +20,6 @@ Catalog JSON (`catalog/catalog.json`) lists packs with URL, sizes and SHA-256. P
 
 ## Repertoires
 A repertoire is a study game plus a side. Cards are keyed per canonical position (transpositions merged); accepted moves are the union at that position. Editing lines and refreshing resets changed cards and removes cards for vanished positions. Intervals 1/3/7/14/30 days.
+
+## Diagnostics
+`lib/core/diagnostics/crash.dart`: Firebase init runs unawaited with a 10 s timeout so it can never delay the first frame; global Flutter/platform/isolate error handlers report sanitized errors when enabled. The app works fully without Firebase.

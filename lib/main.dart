@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 
@@ -9,8 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+
+import 'core/diagnostics/crash.dart';
 
 import 'core/chess/model.dart';
 import 'core/storage/database.dart' show AppDatabase;
@@ -32,6 +33,8 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final dir = await getApplicationSupportDirectory();
   final repo = Repository(AppDatabase(io.File('${dir.path}/castlei.sqlite')));
+  // Never let Firebase delay or block the first frame.
+  unawaited(CrashReporting.start(repo));
   if ((await repo.db.rows('SELECT id FROM puzzles LIMIT 1')).isEmpty) {
     final puzzles = jsonDecode(
       await rootBundle.loadString('assets/puzzles/starter.json'),
@@ -433,6 +436,7 @@ class _HomeState extends State<HomeShell> {
     if (yes == true) {
       widget.engine.cancel();
       await BackupService(widget.repo.db).restore(bytes);
+      await CrashReporting.applyPreference(widget.repo);
       if (mounted) setState(() {});
     }
   }
@@ -825,7 +829,7 @@ class _HomeState extends State<HomeShell> {
           builder: (context, update) => Scaffold(
             appBar: AppBar(title: const Text('Opening repertoires')),
             body: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: pagePadding(context),
               children: [
                 FilledButton.icon(
                   icon: const Icon(Icons.add_rounded),
@@ -1035,7 +1039,7 @@ class _HomeState extends State<HomeShell> {
     var mode = ThemeMode.values.byName(
       await widget.repo.preference('theme', 'system') as String,
     );
-    var crash = await widget.repo.preference('crashConsent', false) as bool;
+    var crash = await widget.repo.preference('crashReports', true) as bool;
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -1044,7 +1048,7 @@ class _HomeState extends State<HomeShell> {
           builder: (context, update) => Scaffold(
             appBar: AppBar(title: const Text('Settings')),
             body: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: pagePadding(context),
               children: [
                 const SectionLabel('Appearance'),
                 SizedBox(
@@ -1112,24 +1116,45 @@ class _HomeState extends State<HomeShell> {
                     SwitchListTile(
                       secondary: const Icon(Icons.bug_report_outlined),
                       title: const Text('Crash reports'),
-                      subtitle: const Text(
-                        'Off by default. Optional Firebase reports with no analytics and no chess data.',
+                      subtitle: Text(
+                        CrashReporting.available
+                            ? 'On by default. Sends anonymous crash diagnostics (app and engine version, error type, stack trace) so bugs get fixed. Never your games, positions, comments or files. No analytics.'
+                            : 'Crash reporting is not available in this build.',
                       ),
-                      value: crash,
-                      onChanged: (v) => guard(() async {
-                        try {
-                          await Firebase.initializeApp();
-                          await FirebaseCrashlytics.instance
-                              .setCrashlyticsCollectionEnabled(v);
-                          await widget.repo.setPreference('crashConsent', v);
-                          update(() => crash = v);
-                        } catch (_) {
-                          throw StateError(
-                            'Firebase is not configured in this private build. No reports were enabled.',
-                          );
-                        }
-                      }),
+                      value: crash && CrashReporting.available,
+                      onChanged: CrashReporting.available
+                          ? (v) => guard(() async {
+                              await widget.repo.setPreference(
+                                'crashReports',
+                                v,
+                              );
+                              await CrashReporting.setEnabled(v);
+                              update(() => crash = v);
+                            })
+                          : null,
                     ),
+                    if (CrashReporting.available && crash)
+                      ListTile(
+                        leading: const Icon(Icons.send_outlined),
+                        title: const Text('Send a test report'),
+                        subtitle: const Text(
+                          'Confirms delivery to your Firebase console.',
+                        ),
+                        onTap: () => guard(() async {
+                          final ok = await CrashReporting.sendTest();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  ok
+                                      ? 'Test report sent'
+                                      : 'Crash reporting is unavailable',
+                                ),
+                              ),
+                            );
+                          }
+                        }),
+                      ),
                   ],
                 ),
                 const SectionLabel('About'),
@@ -1139,7 +1164,7 @@ class _HomeState extends State<HomeShell> {
                       leading: Icon(Icons.castle_outlined),
                       title: Text('Castlei 1.0.0'),
                       subtitle: Text(
-                        'Stockfish 18 · GPL-3.0\nLocal-first. No account required.\niOS validation pending.',
+                        'Stockfish 18 · GPL-3.0\nLocal-first. No account required.',
                       ),
                     ),
                     ListTile(

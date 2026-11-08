@@ -85,7 +85,7 @@ class _EditorState extends State<PositionEditor> {
       ],
     ),
     body: ListView(
-      padding: const EdgeInsets.all(20),
+      padding: pagePadding(context),
       children: [
         if (error != null) ...[
           FeedbackCard(error!, tone: Tone.bad, icon: Icons.rule_rounded),
