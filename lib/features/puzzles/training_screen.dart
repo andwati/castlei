@@ -112,11 +112,12 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
           watch.elapsedMilliseconds,
         );
       }
-      if (!success && items[index]['_retry'] != true)
+      if (!success && items[index]['_retry'] != true) {
         items.insert((index + 4).clamp(0, items.length), {
           ...items[index],
           '_retry': true,
         });
+      }
     } else {
       await service.record(
         'puzzle',

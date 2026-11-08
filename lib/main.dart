@@ -8,6 +8,7 @@ import 'package:dartchess/dartchess.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
@@ -814,7 +815,85 @@ class _HomeState extends State<HomeShell> {
                           child: ListTile(
                             title: Text(r['title']),
                             subtitle: Text('Train ${r['side']}'),
-                            trailing: const Icon(Icons.play_arrow),
+                            trailing: PopupMenuButton<String>(
+                              tooltip: 'Repertoire actions',
+                              onSelected: (a) => guard(() async {
+                                final game = await widget.repo.load(
+                                  r['game_id'],
+                                );
+                                if (a == 'edit') {
+                                  if (!context.mounted) return;
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => GameScreen(
+                                        game: game,
+                                        repo: widget.repo,
+                                        engine: widget.engine,
+                                        study: true,
+                                      ),
+                                    ),
+                                  );
+                                  await TrainingService(widget.repo).buildCards(
+                                    await widget.repo.load(r['game_id']),
+                                    r['side'],
+                                  );
+                                } else if (a == 'delete') {
+                                  if (!context.mounted) return;
+                                  final yes = await showDialog<bool>(
+                                    context: context,
+                                    builder: (c) => AlertDialog(
+                                      title: const Text('Delete repertoire?'),
+                                      content: const Text(
+                                        'Its drill history will be removed. The source study stays in your library.',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(c, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () =>
+                                              Navigator.pop(c, true),
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (yes != true) return;
+                                  await widget.repo.deleteRepertoire(r['id']);
+                                } else if (a == 'export') {
+                                  await SharePlus.instance.share(
+                                    ShareParams(
+                                      files: [
+                                        XFile.fromData(
+                                          utf8.encode(game.exportPgn()),
+                                          mimeType: 'application/x-chess-pgn',
+                                          name: '${game.title}.pgn',
+                                        ),
+                                      ],
+                                      fileNameOverrides: ['${game.title}.pgn'],
+                                    ),
+                                  );
+                                }
+                                update(() {});
+                              }),
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Edit lines & refresh'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'export',
+                                  child: Text('Export PGN'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Delete'),
+                                ),
+                              ],
+                            ),
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(

@@ -10,8 +10,9 @@ Future<void> main() async {
       fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       milliseconds: 150,
     );
-    if (result.bestmove.length < 4 || result.lines.isEmpty)
+    if (result.bestmove.length < 4 || result.lines.isEmpty) {
       throw StateError('No result');
+    }
     final interrupted = e
         .search(
           fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',

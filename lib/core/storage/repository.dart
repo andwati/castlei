@@ -92,6 +92,13 @@ class Repository {
     }
     await db.execute('DELETE FROM games WHERE id=?', [id]);
   });
+  Future<void> deleteRepertoire(String id) => db.transaction(() async {
+    await db.execute(
+      "DELETE FROM attempts WHERE kind='opening' AND json_extract(metadata,'\$.repertoire')=?",
+      [id],
+    );
+    await db.execute('DELETE FROM repertoires WHERE id=?', [id]);
+  });
   Future<void> setPreference(String key, Object value) => db.execute(
     'INSERT INTO preferences VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
     [key, jsonEncode(value)],

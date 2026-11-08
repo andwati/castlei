@@ -1,17 +1,17 @@
-# castlei
+# Castlei
 
-A new Flutter project.
+Private, offline-first chess companion (Flutter, Android first). Play on-device Stockfish 18, analyse and review games, drill tactics and opening repertoires, and keep everything in local SQLite (Drift). License: GPL-3.0.
 
-## Getting Started
+## Build
+Toolchain pins are in `docs/TOOLCHAIN.md`.
+```
+./tool/fetch_engine.sh        # fetch pinned Stockfish + NNUE (checksums in docs/NNUE_SHA256.txt)
+flutter pub get
+flutter analyze && flutter test
+flutter run -d <android device>
+flutter build apk --release   # needs owner signing config, otherwise debug-signed test build
+```
+Optional: `--dart-define=CASTLEI_CATALOG_URL=...` enables puzzle pack downloads (see `catalog/README.md`). Crash reporting is opt-in and requires your own Firebase config; without it the app runs normally.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Docs
+See `docs/ARCHITECTURE.md` (modules, schema, engine protocol, backup and pack formats) and `docs/STATUS.md` (validation status and known limitations).

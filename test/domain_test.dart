@@ -91,4 +91,34 @@ void main() {
     expect(await repo.games(), hasLength(1));
     await db.close();
   });
+  test(
+    'repertoire merges transpositions, resets edits, deletes cleanly',
+    () async {
+      final db = AppDatabase.memory();
+      final repo = Repository(db);
+      final svc = TrainingService(repo);
+      final g = ChessGame.importPgn(
+        PgnGame.parsePgn('1. Nf3 (1. d4 d5 2. Nf3 Nf6) d5 2. d4 Nf6 *'),
+      );
+      await svc.buildCards(g, 'white');
+      final cards = await db.rows('SELECT * FROM cards');
+      // Initial position + the shared post-1...d5 transposition (Nf3/d4 orders differ).
+      final keys = cards
+          .map((c) => positionKey(Chess.fromSetup(Setup.parseFen(c['fen']))))
+          .toSet();
+      expect(keys.length, cards.length);
+      await db.execute('UPDATE cards SET stage=3,due=99');
+      final extra = await repo.load(g.id);
+      extra.current = null;
+      extra.play(Move.parse('c2c4')!);
+      await svc.buildCards(extra, 'white');
+      final reset = await db.rows('SELECT * FROM cards WHERE stage=0');
+      expect(reset, isNotEmpty);
+      final rep = (await db.rows('SELECT id FROM repertoires')).single['id'];
+      await repo.deleteRepertoire(rep);
+      expect(await db.rows('SELECT * FROM cards'), isEmpty);
+      expect(await repo.games(), isNotEmpty);
+      await db.close();
+    },
+  );
 }

@@ -6,7 +6,7 @@ import 'package:dartchess/dartchess.dart';
 String newId() =>
     '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${Random.secure().nextInt(1 << 32).toRadixString(36)}';
 String standardUci(Position p, Move move) {
-  final m = p.normalizeMove(move as NormalMove);
+  final m = p.normalizeMove(move as NormalMove) as NormalMove;
   if (p.board.pieceAt(m.from)?.role == Role.king &&
       p.board.pieceAt(m.to)?.role == Role.rook &&
       p.board.pieceAt(m.to)?.color == p.turn) {
