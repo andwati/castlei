@@ -17,6 +17,8 @@ import 'core/storage/database.dart' show AppDatabase;
 import 'core/storage/repository.dart';
 import 'core/storage/backup.dart';
 import 'core/engine/engine.dart';
+import 'core/ui/theme.dart';
+import 'core/ui/widgets.dart';
 import 'features/play/game_screen.dart';
 import 'features/analysis/position_editor.dart';
 import 'features/puzzles/training_screen.dart';
@@ -98,27 +100,8 @@ class _AppState extends State<CastleiApp> {
     debugShowCheckedModeBanner: false,
     routerConfig: router,
     themeMode: mode,
-    theme: theme(Brightness.light),
-    darkTheme: theme(Brightness.dark),
-  );
-  ThemeData theme(Brightness brightness) => ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xff167d72),
-      brightness: brightness,
-      secondary: const Color(0xffdb795e),
-    ),
-    useMaterial3: true,
-    scaffoldBackgroundColor: brightness == Brightness.light
-        ? const Color(0xfff5f6f0)
-        : const Color(0xff141d1b),
-    appBarTheme: const AppBarTheme(centerTitle: false),
-    cardTheme: const CardThemeData(
-      elevation: 0,
-      margin: EdgeInsets.symmetric(vertical: 6),
-    ),
-    inputDecorationTheme: const InputDecorationTheme(
-      border: OutlineInputBorder(),
-    ),
+    theme: buildTheme(Brightness.light),
+    darkTheme: buildTheme(Brightness.dark),
   );
 }
 
@@ -514,104 +497,113 @@ class _HomeState extends State<HomeShell> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           if (tab == 0) ...[
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('YOUR NEXT GOOD MOVE'),
-                  const SizedBox(height: 12),
-                  Text(
-                    'A little practice.\nA stronger game.',
-                    style: Theme.of(context).textTheme.headlineLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: () => guard(() => newGame()),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Play a game'),
-                  ),
-                ],
-              ),
+            FutureBuilder(
+              future: widget.repo.games(),
+              builder: (c, snap) {
+                final unfinished = (snap.data ?? [])
+                    .where((r) => r['source'] == 'engine' && r['result'] == '*')
+                    .firstOrNull;
+                return unfinished == null
+                    ? HeroCard(
+                        eyebrow: 'Your next good move',
+                        title: 'A little practice.\nA stronger game.',
+                        action: HeroButton(
+                          label: 'Play a game',
+                          icon: Icons.play_arrow_rounded,
+                          onPressed: () => guard(() => newGame()),
+                        ),
+                      )
+                    : HeroCard(
+                        eyebrow: 'Pick up where you left off',
+                        title: unfinished['title'] as String,
+                        detail: 'Paused — your progress is saved.',
+                        action: HeroButton(
+                          label: 'Resume game',
+                          icon: Icons.play_arrow_rounded,
+                          onPressed: () => guard(() async {
+                            await open(
+                              await widget.repo.load(unfinished['id']),
+                            );
+                          }),
+                        ),
+                      );
+              },
             ),
-            const SizedBox(height: 20),
-            activity(
-              'Daily tactics',
-              'A fresh position to think through',
-              Icons.extension_outlined,
-              () => Navigator.push(
+            const SizedBox(height: 12),
+            ActionTile(
+              title: 'Daily tactics',
+              subtitle: 'A fresh position to think through',
+              icon: Icons.extension_rounded,
+              accent: context.colors.secondary,
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => TrainingScreen(repo: widget.repo),
                 ),
               ),
             ),
-            activity(
-              'Your progress',
-              'Results, recall, and training trends',
-              Icons.insights,
-              () => Navigator.push(
+            ActionTile(
+              title: 'Your progress',
+              subtitle: 'Results, recall, and training trends',
+              icon: Icons.insights_rounded,
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => StatisticsScreen(repo: widget.repo),
                 ),
               ),
             ),
-            Text('RECENT GAMES', style: Theme.of(context).textTheme.labelLarge),
+            const SectionLabel('Recent games'),
           ],
           if (tab == 1) ...[
-            Text(
-              'Make room for practice.',
-              style: Theme.of(context).textTheme.headlineMedium,
+            HeroCard(
+              eyebrow: 'Play Stockfish',
+              title: 'Make room for practice.',
+              detail: 'Five difficulty levels, optional clocks, fully offline.',
+              action: HeroButton(
+                label: 'New engine game',
+                icon: Icons.add_rounded,
+                onPressed: () => guard(() => newGame()),
+              ),
             ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: () => guard(() => newGame()),
-              icon: const Icon(Icons.add),
-              label: const Text('New engine game'),
-            ),
-            const SizedBox(height: 20),
-            const Text('SAVED GAMES'),
+            const SectionLabel('Saved games'),
           ],
           if (tab == 2) ...[
-            activity(
-              'Analysis board',
-              'Explore positions and save your ideas',
-              Icons.analytics_outlined,
-              () => guard(() => newGame(study: true)),
+            ActionTile(
+              title: 'Analysis board',
+              subtitle: 'Explore positions and save your ideas',
+              icon: Icons.analytics_rounded,
+              onTap: () => guard(() => newGame(study: true)),
             ),
-            activity(
-              'Tactical puzzles',
-              'Offline practice by theme and difficulty',
-              Icons.extension_outlined,
-              () => Navigator.push(
+            ActionTile(
+              title: 'Tactical puzzles',
+              subtitle: 'Offline practice by theme and difficulty',
+              icon: Icons.extension_rounded,
+              accent: context.colors.secondary,
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => TrainingScreen(repo: widget.repo),
                 ),
               ),
             ),
-            activity(
-              'Puzzle collections',
-              'Add more positions for offline practice',
-              Icons.download_outlined,
-              () => Navigator.push(
+            ActionTile(
+              title: 'Puzzle collections',
+              subtitle: 'Add more positions for offline practice',
+              icon: Icons.download_rounded,
+              accent: context.colors.tertiary,
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => PackScreen(repo: widget.repo),
                 ),
               ),
             ),
-            activity(
-              'Opening repertoires',
-              'Rehearse the lines you want to remember',
-              Icons.account_tree_outlined,
-              repertoires,
+            ActionTile(
+              title: 'Opening repertoires',
+              subtitle: 'Rehearse the lines you want to remember',
+              icon: Icons.account_tree_rounded,
+              onTap: repertoires,
             ),
           ],
           if (tab == 3) ...[
@@ -658,21 +650,87 @@ class _HomeState extends State<HomeShell> {
                 return Column(
                   children: [
                     if (rows.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(30),
-                        child: Text('Your games will appear here.'),
+                      Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.castle_outlined,
+                              size: 44,
+                              color: context.colors.outline,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Your games will appear here.',
+                              style: context.text.bodyLarge?.copyWith(
+                                color: context.colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     for (final row in rows)
                       Card(
                         child: ListTile(
-                          leading: Icon(
-                            row['result'] == '*'
-                                ? Icons.play_circle_outline
-                                : Icons.check_circle_outline,
+                          leading: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: context.colors.primaryContainer,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              row['result'] == '*'
+                                  ? Icons.play_arrow_rounded
+                                  : row['source'] == 'import'
+                                  ? Icons.file_download_done_rounded
+                                  : Icons.flag_rounded,
+                              color: context.colors.onPrimaryContainer,
+                            ),
                           ),
-                          title: Text(row['title']),
-                          subtitle: Text(
-                            '${row['source']} · ${row['result']}${row['assisted'] == 1 ? ' · assisted' : ''}',
+                          title: Text(
+                            row['title'],
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                StatusChip(
+                                  row['result'] == '*'
+                                      ? 'In progress'
+                                      : '${row['result']}',
+                                  icon: row['result'] == '*'
+                                      ? Icons.pause_circle_outline
+                                      : Icons.check_circle_outline,
+                                  color: row['result'] == '*'
+                                      ? context.colors.secondary
+                                      : context.colors.primary,
+                                ),
+                                StatusChip(
+                                  '${row['source']}',
+                                  icon: row['source'] == 'engine'
+                                      ? Icons.memory
+                                      : row['source'] == 'study'
+                                      ? Icons.school_outlined
+                                      : Icons.file_open_outlined,
+                                ),
+                                if (row['assisted'] == 1)
+                                  StatusChip(
+                                    'assisted',
+                                    icon: Icons.lightbulb_outline,
+                                    color: context.tokens.warn,
+                                  ),
+                                if (row['favorite'] == 1)
+                                  StatusChip(
+                                    'favorite',
+                                    icon: Icons.star_rounded,
+                                    color: context.colors.tertiary,
+                                  ),
+                              ],
+                            ),
                           ),
                           onTap: () => guard(() async {
                             await open(

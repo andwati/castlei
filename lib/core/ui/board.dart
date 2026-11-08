@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dartchess/dartchess.dart';
 
+import 'theme.dart';
+
 class ChessBoard extends StatefulWidget {
   const ChessBoard({
     super.key,
@@ -16,13 +18,14 @@ class ChessBoard extends StatefulWidget {
     this.onShape,
     this.arrow,
     this.coordinates = true,
+    this.lastMove,
   });
   final Position position;
   final void Function(Move) onMove;
   final bool flipped, enabled, drawing, coordinates;
   final List<String> shapes;
   final void Function(String)? onShape;
-  final String? arrow;
+  final String? arrow, lastMove;
   @override
   State<ChessBoard> createState() => _BoardState();
 }
@@ -57,22 +60,55 @@ class _BoardState extends State<ChessBoard> {
           NormalMove(from: from, to: s, promotion: Role.queen),
         );
         if (legal) {
-          final role = await showDialog<Role>(
+          final role = await showModalBottomSheet<Role>(
             context: context,
-            builder: (c) => SimpleDialog(
-              title: const Text('Promote pawn'),
-              children: [
-                for (final r in [
-                  Role.queen,
-                  Role.rook,
-                  Role.bishop,
-                  Role.knight,
-                ])
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(c, r),
-                    child: Text(r.name),
-                  ),
-              ],
+            builder: (c) => SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Promote to',
+                      style: Theme.of(c).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        for (final r in [
+                          Role.queen,
+                          Role.rook,
+                          Role.bishop,
+                          Role.knight,
+                        ])
+                          Semantics(
+                            button: true,
+                            label: 'Promote to ${r.name}',
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () => Navigator.pop(c, r),
+                              child: Container(
+                                width: 72,
+                                height: 72,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(c)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: SvgPicture.asset(
+                                  'assets/pieces/${p.turn == Side.white ? 'w' : 'b'}${r.letter.toUpperCase()}.svg',
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
           if (role == null || !mounted) return;
@@ -89,146 +125,206 @@ class _BoardState extends State<ChessBoard> {
   }
 
   @override
-  Widget build(BuildContext context) => AspectRatio(
-    aspectRatio: 1,
-    child: LayoutBuilder(
-      builder: (context, box) {
-        final size = box.maxWidth / 8;
-        Square squareAt(Offset o) => Square(
-          squareIndex(
-            (o.dy / size).floor().clamp(0, 7) * 8 +
-                (o.dx / size).floor().clamp(0, 7),
-          ),
-        );
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            children: [
-              GestureDetector(
-                onPanStart: (d) {
-                  dragFrom = squareAt(d.localPosition);
-                  if (!widget.drawing) setState(() => selected = dragFrom);
-                },
-                onPanEnd: (_) => dragFrom = null,
-                onPanUpdate: (d) {},
-                onPanDown: (d) {},
-                child: Listener(
-                  onPointerUp: (e) {
-                    if (dragFrom != null) {
-                      final to = squareAt(e.localPosition);
-                      if (to != dragFrom) {
-                        if (widget.drawing) {
-                          widget.onShape?.call('G${dragFrom!.name}${to.name}');
-                        } else {
-                          choose(to);
-                        }
-                      }
-                      dragFrom = null;
-                    }
-                  },
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    itemCount: 64,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 8,
-                        ),
-                    itemBuilder: (c, i) {
-                      final sq = Square(squareIndex(i));
-                      final piece = widget.position.board.pieceAt(sq);
-                      final legal =
-                          selected != null &&
-                          widget.position.legalMovesOf(selected!).has(sq);
-                      final light = (sq.file + sq.rank) % 2 != 0;
-                      final color = selected == sq
-                          ? const Color(0xffedb978)
-                          : light
-                          ? const Color(0xffe9eee4)
-                          : const Color(0xff72958a);
-                      return Semantics(
-                        button: true,
-                        label:
-                            '${sq.name}, ${piece == null ? 'empty' : '${piece.color.name} ${piece.role.name}'}${selected == sq ? ', selected' : ''}${legal ? ', legal destination' : ''}',
-                        child: GestureDetector(
-                          onTap: () => choose(sq),
-                          child: Container(
-                            color: color,
-                            child: Stack(
-                              children: [
-                                if (piece != null)
-                                  Padding(
-                                    padding: EdgeInsets.all(size * .07),
-                                    child: SvgPicture.asset(
-                                      'assets/pieces/${piece.color == Side.white ? 'w' : 'b'}${piece.role.letter.toUpperCase()}.svg',
-                                    ),
-                                  ),
-                                if (legal)
-                                  Center(
-                                    child: Container(
-                                      width: size * .22,
-                                      height: size * .22,
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(
-                                          alpha: .22,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                if (widget.coordinates && i % 8 == 0)
-                                  Positioned(
-                                    left: 3,
-                                    top: 1,
-                                    child: Text(
-                                      '${sq.rank + 1}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: light
-                                            ? Colors.black54
-                                            : Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                if (widget.coordinates && i >= 56)
-                                  Positioned(
-                                    right: 3,
-                                    bottom: 1,
-                                    child: Text(
-                                      sq.name[0],
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: light
-                                            ? Colors.black54
-                                            : Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
+  Widget build(BuildContext context) {
+    final tk = context.tokens;
+    final last = widget.lastMove != null && widget.lastMove!.length >= 4
+        ? {widget.lastMove!.substring(0, 2), widget.lastMove!.substring(2, 4)}
+        : <String>{};
+    final kingInCheck = widget.position.isCheck
+        ? widget.position.board.kingOf(widget.position.turn)
+        : null;
+    return AspectRatio(
+      aspectRatio: 1,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final size = box.maxWidth / 8;
+          Square squareAt(Offset o) => Square(
+            squareIndex(
+              (o.dy / size).floor().clamp(0, 7) * 8 +
+                  (o.dx / size).floor().clamp(0, 7),
+            ),
+          );
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: .18),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onPanStart: (d) {
+                      dragFrom = squareAt(d.localPosition);
+                      if (!widget.drawing) setState(() => selected = dragFrom);
                     },
+                    onPanEnd: (_) => dragFrom = null,
+                    onPanUpdate: (d) {},
+                    onPanDown: (d) {},
+                    child: Listener(
+                      onPointerUp: (e) {
+                        if (dragFrom != null) {
+                          final to = squareAt(e.localPosition);
+                          if (to != dragFrom) {
+                            if (widget.drawing) {
+                              widget.onShape?.call(
+                                'G${dragFrom!.name}${to.name}',
+                              );
+                            } else {
+                              choose(to);
+                            }
+                          }
+                          dragFrom = null;
+                        }
+                      },
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: EdgeInsets.zero,
+                        itemCount: 64,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 8,
+                            ),
+                        itemBuilder: (c, i) {
+                          final sq = Square(squareIndex(i));
+                          final piece = widget.position.board.pieceAt(sq);
+                          final legal =
+                              selected != null &&
+                              widget.position.legalMovesOf(selected!).has(sq);
+                          final light = (sq.file + sq.rank) % 2 != 0;
+                          final base = light ? tk.boardLight : tk.boardDark;
+                          final isLast = last.contains(sq.name);
+                          final isSel = selected == sq;
+                          final isCheck = kingInCheck == sq;
+                          final color = isSel
+                              ? Color.alphaBlend(
+                                  tk.selected.withValues(alpha: .55),
+                                  base,
+                                )
+                              : isLast
+                              ? Color.alphaBlend(
+                                  tk.lastMove.withValues(alpha: .6),
+                                  base,
+                                )
+                              : base;
+                          final capture = legal && piece != null;
+                          final onSquare = light ? tk.boardDark : tk.boardLight;
+                          return Semantics(
+                            button: true,
+                            label:
+                                '${sq.name}, ${piece == null ? 'empty' : '${piece.color.name} ${piece.role.name}'}${isSel ? ', selected' : ''}${legal ? ', legal destination' : ''}${isLast ? ', last move' : ''}${isCheck ? ', king in check' : ''}',
+                            child: GestureDetector(
+                              onTap: () => choose(sq),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  gradient: isCheck
+                                      ? RadialGradient(
+                                          colors: [
+                                            tk.check,
+                                            tk.check.withValues(alpha: .0),
+                                          ],
+                                          stops: const [.35, 1],
+                                        )
+                                      : null,
+                                  border: isSel
+                                      ? Border.all(color: tk.selected, width: 3)
+                                      : null,
+                                ),
+                                child: Stack(
+                                  children: [
+                                    if (piece != null)
+                                      Padding(
+                                        padding: EdgeInsets.all(size * .06),
+                                        child: SvgPicture.asset(
+                                          'assets/pieces/${piece.color == Side.white ? 'w' : 'b'}${piece.role.letter.toUpperCase()}.svg',
+                                        ),
+                                      ),
+                                    if (legal && !capture)
+                                      Center(
+                                        child: Container(
+                                          width: size * .26,
+                                          height: size * .26,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: .26,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                    if (capture)
+                                      Container(
+                                        margin: EdgeInsets.all(size * .04),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.black.withValues(
+                                              alpha: .35,
+                                            ),
+                                            width: size * .07,
+                                          ),
+                                        ),
+                                      ),
+                                    if (widget.coordinates && i % 8 == 0)
+                                      Positioned(
+                                        left: 3,
+                                        top: 1,
+                                        child: Text(
+                                          '${sq.rank + 1}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: onSquare,
+                                          ),
+                                        ),
+                                      ),
+                                    if (widget.coordinates && i >= 56)
+                                      Positioned(
+                                        right: 3,
+                                        bottom: 1,
+                                        child: Text(
+                                          sq.name[0],
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: onSquare,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                ),
+                  IgnorePointer(
+                    child: CustomPaint(
+                      size: Size.square(box.maxWidth),
+                      painter: _Arrows([
+                        ...widget.shapes,
+                        if (widget.arrow != null)
+                          'B${widget.arrow!.substring(0, 4)}',
+                      ], widget.flipped),
+                    ),
+                  ),
+                ],
               ),
-              IgnorePointer(
-                child: CustomPaint(
-                  size: Size.square(box.maxWidth),
-                  painter: _Arrows([
-                    ...widget.shapes,
-                    if (widget.arrow != null)
-                      'B${widget.arrow!.substring(0, 4)}',
-                  ], widget.flipped),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _Arrows extends CustomPainter {
@@ -248,37 +344,48 @@ class _Arrows extends CustomPainter {
 
     for (final shape in shapes) {
       if (shape.length != 3 && shape.length != 5) continue;
-      final colors = {
-        'G': Colors.green,
-        'R': Colors.red,
-        'B': Colors.blue,
-        'Y': Colors.amber,
+      const colors = {
+        'G': Color(0xff3f9b6e),
+        'R': Color(0xffd8433a),
+        'B': Color(0xff3b7dd8),
+        'Y': Color(0xffe0a526),
       };
-      final p = Paint()
-        ..color = (colors[shape[0]] ?? Colors.green).withValues(alpha: .65)
-        ..strokeWidth = cell * .13
-        ..strokeCap = StrokeCap.round;
+      final color = (colors[shape[0]] ?? colors['G']!).withValues(alpha: .82);
       final a = center(shape.substring(1, 3));
       if (shape.length == 3) {
-        c.drawCircle(a, cell * .37, p..style = PaintingStyle.stroke);
+        c.drawCircle(
+          a,
+          cell * .42,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = cell * .09,
+        );
         continue;
       }
       final b = center(shape.substring(3));
-      c.drawLine(a, b, p);
       final angle = math.atan2(b.dy - a.dy, b.dx - a.dx);
-      for (final sign in [-1, 1]) {
-        c.drawLine(
-          b,
-          b -
-              Offset(
-                    math.cos(angle + sign * .55),
-                    math.sin(angle + sign * .55),
-                  ) *
-                  cell *
-                  .3,
-          p,
-        );
-      }
+      final head = cell * .34;
+      final tip = b - Offset(math.cos(angle), math.sin(angle)) * (cell * .08);
+      final neck = tip - Offset(math.cos(angle), math.sin(angle)) * head;
+      final start = a + Offset(math.cos(angle), math.sin(angle)) * (cell * .22);
+      c.drawLine(
+        start,
+        neck,
+        Paint()
+          ..color = color
+          ..strokeWidth = cell * .17
+          ..strokeCap = StrokeCap.round,
+      );
+      final wing = Offset(-math.sin(angle), math.cos(angle)) * head * .55;
+      c.drawPath(
+        Path()
+          ..moveTo(tip.dx, tip.dy)
+          ..lineTo(neck.dx + wing.dx, neck.dy + wing.dy)
+          ..lineTo(neck.dx - wing.dx, neck.dy - wing.dy)
+          ..close(),
+        Paint()..color = color,
+      );
     }
   }
 

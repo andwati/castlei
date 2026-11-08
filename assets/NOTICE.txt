@@ -8,3 +8,4 @@ License evidence: docs/LILA_ASSET_LICENSE.md.
 Puzzles: Lichess open database, CC0-1.0, https://database.lichess.org/.
 The bundled dataset is a deterministically selected validated subset of a downloaded CSV prefix. See docs/PUZZLE_PROVENANCE.json.
 Dart chess rules: lichess-org/dartchess, GPL-3.0.
+Fraunces typeface: Copyright 2018 The Fraunces Project Authors, SIL Open Font License 1.1 (docs/FRAUNCES_OFL.txt).

@@ -1,6 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
+import '../../core/ui/theme.dart';
+import '../../core/ui/widgets.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -119,6 +123,32 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _resign() async {
+    final g = widget.game;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Resign this game?'),
+        content: const Text('It will be saved as a loss.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Keep playing'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Resign'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true) {
+      g.result = cubit.human.name == 'white' ? '0-1' : '1-0';
+      g.settings['reason'] = 'Resignation';
+      await cubit.pause();
+    }
+  }
+
   String clock(int ms) =>
       '${ms ~/ 60000}:${((ms ~/ 1000) % 60).toString().padLeft(2, '0')}';
   @override
@@ -151,26 +181,41 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.memory, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.study
-                          ? 'ANALYSIS WORKSPACE'
-                          : 'STOCKFISH · ${g.settings['level'] ?? 'Medium'}',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
+                  StatusChip(
+                    widget.study
+                        ? 'Analysis workspace'
+                        : 'Stockfish · ${g.settings['level'] ?? 'Medium'}',
+                    icon: widget.study
+                        ? Icons.analytics_outlined
+                        : Icons.memory,
+                    color: context.colors.primary,
                   ),
-                  if (cubit.timed)
-                    Text(
-                      '${clock(cubit.black)}  /  ${clock(cubit.white)}',
-                      style: Theme.of(context).textTheme.titleLarge,
+                  const Spacer(),
+                  if (cubit.timed) ...[
+                    _Clock(
+                      label: 'Black',
+                      value: clock(cubit.black),
+                      active:
+                          !state.paused &&
+                          g.result == '*' &&
+                          g.position.turn.name == 'black',
                     ),
+                    const SizedBox(width: 8),
+                    _Clock(
+                      label: 'White',
+                      value: clock(cubit.white),
+                      active:
+                          !state.paused &&
+                          g.result == '*' &&
+                          g.position.turn.name == 'white',
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
               ChessBoard(
                 position: g.position,
+                lastMove: current?.uci,
                 coordinates: coordinates,
                 flipped: flipped,
                 enabled: cubit.canMove,
@@ -239,18 +284,56 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
               if (!widget.study) ...[
-                Text(
-                  g.result == '*'
-                      ? (state.thinking
-                            ? 'Stockfish is thinking…'
-                            : state.paused
-                            ? 'Game paused — your progress is saved'
-                            : 'Your move')
-                      : '${g.result} · ${g.settings['reason'] ?? 'Finished'}',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: g.result != '*'
+                        ? context.colors.secondaryContainer
+                        : state.thinking
+                        ? context.colors.surfaceContainerHigh
+                        : context.colors.primaryContainer,
+                    borderRadius: BorderRadius.circular(Corner.md),
+                  ),
+                  child: Row(
+                    children: [
+                      if (state.thinking)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      else
+                        Icon(
+                          g.result != '*'
+                              ? Icons.flag_rounded
+                              : state.paused
+                              ? Icons.pause_circle_outline
+                              : Icons.touch_app_outlined,
+                        ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          g.result == '*'
+                              ? (state.thinking
+                                    ? 'Stockfish is thinking…'
+                                    : state.paused
+                                    ? 'Game paused — your progress is saved'
+                                    : 'Your move')
+                              : '${g.result} · ${g.settings['reason'] ?? 'Finished'}',
+                          style: context.text.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                Wrap(
-                  spacing: 8,
+                const SizedBox(height: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (g.result == '*')
                       FilledButton.icon(
@@ -260,23 +343,42 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         ),
                         label: Text(state.paused ? 'Resume' : 'Pause'),
                       ),
-                    if (g.result == '*')
-                      OutlinedButton.icon(
-                        onPressed: g.current == null ? null : cubit.undo,
-                        icon: const Icon(Icons.undo),
-                        label: const Text('Take back'),
+                    if (g.result == '*') ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _Tool(
+                              icon: Icons.undo_rounded,
+                              label: 'Take back',
+                              onTap: g.current == null ? null : cubit.undo,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _Tool(
+                              icon: Icons.lightbulb_outline_rounded,
+                              label: 'Hint',
+                              onTap: () async {
+                                setState(
+                                  () => hintLevel = (hintLevel + 1).clamp(1, 2),
+                                );
+                                await cubit.hint();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _Tool(
+                              icon: Icons.flag_outlined,
+                              label: 'Resign',
+                              danger: true,
+                              onTap: _resign,
+                            ),
+                          ),
+                        ],
                       ),
-                    if (g.result == '*')
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          setState(
-                            () => hintLevel = (hintLevel + 1).clamp(1, 2),
-                          );
-                          await cubit.hint();
-                        },
-                        icon: const Icon(Icons.lightbulb_outline),
-                        label: const Text('Hint'),
-                      ),
+                    ],
                     if (!cubit.canClaim && cubit.intendedClaims.isNotEmpty)
                       TextButton(
                         onPressed: () async {
@@ -307,35 +409,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       TextButton(
                         onPressed: cubit.claim,
                         child: const Text('Claim draw'),
-                      ),
-                    if (g.result == '*')
-                      TextButton(
-                        onPressed: () async {
-                          final yes = await showDialog<bool>(
-                            context: context,
-                            builder: (c) => AlertDialog(
-                              title: const Text('Resign this game?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(c, false),
-                                  child: const Text('Keep playing'),
-                                ),
-                                FilledButton(
-                                  onPressed: () => Navigator.pop(c, true),
-                                  child: const Text('Resign'),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (yes == true) {
-                            g.result = cubit.human.name == 'white'
-                                ? '0-1'
-                                : '1-0';
-                            g.settings['reason'] = 'Resignation';
-                            await cubit.pause();
-                          }
-                        },
-                        child: const Text('Resign'),
                       ),
                   ],
                 ),
@@ -599,4 +672,81 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
     },
   );
+}
+
+class _Clock extends StatelessWidget {
+  const _Clock({
+    required this.label,
+    required this.value,
+    required this.active,
+  });
+  final String label, value;
+  final bool active;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: '$label clock $value${active ? ', running' : ''}',
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: active
+            ? context.colors.primary
+            : context.colors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ExcludeSemantics(
+        child: Text(
+          value,
+          style: context.text.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            fontFeatures: const [FontFeature.tabularFigures()],
+            color: active ? context.colors.onPrimary : context.colors.onSurface,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _Tool extends StatelessWidget {
+  const _Tool({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool danger;
+  @override
+  Widget build(BuildContext context) {
+    final c = danger ? context.colors.error : context.colors.onSurface;
+    return Material(
+      color: context.colors.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(Corner.sm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Corner.sm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: onTap == null ? context.colors.outline : c),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                style: context.text.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: onTap == null ? context.colors.outline : c,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
