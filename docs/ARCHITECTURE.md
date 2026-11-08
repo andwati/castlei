@@ -25,3 +25,8 @@ A repertoire is a study game plus a side. Cards are keyed per canonical position
 `lib/core/diagnostics/crash.dart`: Firebase init runs unawaited with a 10 s timeout so it can never delay the first frame; global Flutter/platform/isolate error handlers report sanitized errors when enabled. The app works fully without Firebase.
 
 Performance monitoring lives in `lib/core/diagnostics/perf.dart` (`Perf.trace`, `Perf.record`, frame statistics); it shares the Firebase initialization above and is controlled by the `perfMonitoring` preference.
+
+## Online layer
+- `lib/core/cloud/account.dart` (Firebase Auth: Google, Apple), `cloud_backup.dart` (uploads the validated backup archive to `users/{uid}/backups`, retention 5, Wi-Fi only, change tracking via `Repository.changes`), `remote_config.dart` (typed, clamped values with offline defaults).
+- `lib/core/notifications/notifications.dart` (local reminders with timezone-aware scheduling, FCM topic) and `lib/core/diagnostics/analytics.dart`.
+- Every online capability is optional, switchable in Settings and guarded so failures never surface as unhandled errors; the app starts and plays fully offline.

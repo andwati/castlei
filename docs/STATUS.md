@@ -18,6 +18,18 @@
 ## Full game on the owner phone
 `integration_test/full_game_test.dart` plays a complete game against the app's Medium engine purely by tapping the board (own moves from a second full-strength Stockfish): finished 1-0 by checkmate in 77 plies, including castling; check glow, last-move highlight and result card verified on screen.
 
+## Online features (accounts, cloud backup, analytics, messaging, remote config)
+- Built and running on the owner phone: Settings → Account (Google; Apple on iOS), automatic cloud backup logic (after finished games and daily, Wi-Fi only, last 5 versions, restore from cloud), usage analytics (default on, switchable), local reminders (due drills, daily puzzle, unfinished game; the system alarm for the daily puzzle was confirmed on the phone, and the test notification was delivered), FCM announcements topic, Remote Config (engine caps, kill switches, announcement card), In-App Messaging (suppressed during games), app shortcuts, predictive back.
+- **Not yet live because they need console steps** (see `docs/FIREBASE_SETUP.md`): Google/Apple sign-in providers, Storage bucket and rules deployment, Remote Config parameters, APNs key. Sign-in, cloud upload/restore and delivery of push and analytics events have therefore **not been exercised end to end**.
+- Release signing key generated (gitignored; back it up, see `docs/RELEASE.md`); first signed build uploaded to Firebase App Distribution (group `owner`, no testers yet); CI release workflow written (needs repository secrets).
+- Unit tests cover reminder timing, backup retention, analytics bucketing, remote-config clamping.
+
+## Engine speed
+ARM NEON enabled for arm64 builds (Android and iOS). Measured on the owner phone (3 s searches, 3 positions): average 295 → 460 knps (+56%), depth 20 → 21; x86_64 unaffected. iOS speed unmeasured.
+
+## Board, review and openings
+Pieces slide between squares (disabled with reduced motion), original synthesized move/capture/check/end sounds with matching haptics (sounds off by default), evaluation graph (tap to jump) with text quality marks in the move list, opening names from the CC0 Lichess list matched by position (offline).
+
 ## Performance monitoring (Firebase Performance)
 - Android and iOS configured (Gradle `firebase-perf` plugin, iOS via the Firebase SDK); on by default and switchable in Settings; debug runs never report; Firebase's automatic app-start/network traces are on natively.
 - Custom traces (`lib/core/diagnostics/perf.dart`) carry only names, timings and counts: `first_frame`, `engine_init`, `engine_search` (requested vs actual ms, overhead, depth), `review_move`, `review_game`, `pgn_import`, `backup_export`, `backup_restore`, `catalog_refresh`, `pack_install`, and `frames` (total/slow/frozen frames, flushed when the app is backgrounded).
