@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../firebase_options.dart';
 import '../storage/repository.dart';
+import 'env.dart';
 
 const appVersion = '1.0.0+1';
 const engineVersion = 'stockfish-18';
@@ -54,6 +55,8 @@ class CrashReporting {
       final crashlytics = FirebaseCrashlytics.instance;
       await crashlytics.setCustomKey('app_version', appVersion);
       await crashlytics.setCustomKey('engine', engineVersion);
+      // Test bindings own the global error hooks; leave them alone in tests.
+      if (runningUnderTest) return;
       FlutterError.onError = (details) {
         FlutterError.presentError(details);
         if (enabled) {
@@ -108,6 +111,18 @@ class CrashReporting {
         enabled,
       );
     }
+  }
+
+  /// Adds a short breadcrumb to the next crash report (scrubbed, bounded).
+  static void breadcrumb(String message) {
+    if (!enabled) return;
+    FirebaseCrashlytics.instance.log(scrub(message));
+  }
+
+  /// Sets a coarse custom key (feature, difficulty, ...) on future reports.
+  static void key(String name, String value) {
+    if (!enabled) return;
+    FirebaseCrashlytics.instance.setCustomKey(name, scrub(value));
   }
 
   /// Records a handled problem with only an error category.

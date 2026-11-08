@@ -77,6 +77,33 @@ class Perf {
     }
   }
 
+  /// Wraps a network call in an HTTP metric (status, size, duration).
+  /// [call] returns the HTTP status code and payload size in bytes.
+  static Future<T> http<T>(
+    String url,
+    Future<T> Function(void Function(int status, int bytes) report) call,
+  ) async {
+    if (!enabled) return call((_, _) {});
+    HttpMetric? metric;
+    try {
+      metric = FirebasePerformance.instance.newHttpMetric(url, HttpMethod.Get);
+      await metric.start();
+    } catch (_) {
+      metric = null;
+    }
+    try {
+      return await call((status, bytes) {
+        metric
+          ?..httpResponseCode = status
+          ..responsePayloadSize = bytes;
+      });
+    } finally {
+      try {
+        await metric?.stop();
+      } catch (_) {}
+    }
+  }
+
   /// Records a finished measurement as a trace with numeric metrics only.
   static Future<void> record(
     String name, {

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../core/chess/openings.dart';
 import '../../core/diagnostics/analytics.dart';
 import '../analysis/eval_graph.dart';
 import '../../core/notifications/notifications.dart';
@@ -58,6 +59,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     flipped = widget.game.settings['side'] == 'black';
     WidgetsBinding.instance.addObserver(this);
     loadPreferences();
+    Openings.load().then((_) {
+      if (mounted) setState(() {});
+    });
     Notifications.cancelResume();
     // Don't interrupt a game with in-app announcements.
     Analytics.suppressMessages(true);
@@ -271,6 +275,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ),
                   ],
                 ],
+              ),
+              Builder(
+                builder: (_) {
+                  final o = Openings.forLine(g, g.current);
+                  if (o == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Semantics(
+                      label: 'Opening: ${o.$2}',
+                      child: Text(
+                        '${o.$1} · ${o.$2}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.bodyMedium?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               ChessBoard(

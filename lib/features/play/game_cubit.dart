@@ -9,6 +9,7 @@ import '../../core/chess/model.dart';
 import '../../core/cloud/cloud_backup.dart';
 import '../../core/cloud/remote_config.dart';
 import '../../core/diagnostics/analytics.dart';
+import '../../core/diagnostics/crash.dart';
 import '../../core/diagnostics/perf.dart';
 import '../../core/notifications/notifications.dart';
 import '../../core/engine/engine.dart';
@@ -277,7 +278,8 @@ class GameCubit extends Cubit<GameView> {
       if (!isClosed) emit(GameView(paused: game.result != '*'));
     } on SearchCanceled {
       /* Paused or replaced. */
-    } catch (e) {
+    } catch (e, st) {
+      CrashReporting.nonFatal('engine_move', e, st);
       watch.stop();
       if (!isClosed) emit(GameView(error: e.toString()));
     }
@@ -347,6 +349,7 @@ class GameCubit extends Cubit<GameView> {
     game.assisted = true;
     await persist();
     Analytics.log('hint_used');
+    CrashReporting.breadcrumb('hint');
     try {
       final r = await engine.search(
         fen: game.rootFen,

@@ -36,12 +36,17 @@ import 'features/puzzles/training.dart';
 import 'features/puzzles/packs.dart';
 import 'features/statistics/statistics.dart';
 
+/// Tests re-run main() in one process; never leave two connections on the file.
+AppDatabase? _openDatabase;
+
 Future<void> main() async {
   final startup = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final dir = await getApplicationSupportDirectory();
-  final repo = Repository(AppDatabase(io.File('${dir.path}/castlei.sqlite')));
+  await _openDatabase?.close();
+  _openDatabase = AppDatabase(io.File('${dir.path}/castlei.sqlite'));
+  final repo = Repository(_openDatabase!);
   // Never let Firebase delay or block the first frame.
   var firstFrameMs = -1;
   WidgetsBinding.instance.addPostFrameCallback(
@@ -67,26 +72,6 @@ Future<void> main() async {
     }
     await Perf.record('first_frame', metrics: {'ms': firstFrameMs});
   }());
-  if ((await repo.db.rows('SELECT id FROM puzzles LIMIT 1')).isEmpty) {
-    final puzzles = jsonDecode(
-      await rootBundle.loadString('assets/puzzles/starter.json'),
-    ) as List;
-    await repo.db.transaction(() async {
-      for (final p in puzzles) {
-        await repo.db.execute(
-          'INSERT OR IGNORE INTO puzzles VALUES(?,?,?,?,?,?)',
-          [
-            p['id'],
-            'starter',
-            p['fen'],
-            jsonEncode(p['moves']),
-            p['rating'],
-            p['themes'],
-          ],
-        );
-      }
-    });
-  }
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks([
       'Stockfish',
@@ -96,6 +81,8 @@ Future<void> main() async {
     ], await rootBundle.loadString('assets/NOTICE.txt'));
   });
   runApp(CastleiApp(repo: repo));
+  // Seed the starter puzzles after the first frame so first launch isn't delayed.
+  repo.seeding = _seedStarterPuzzles(repo);
 }
 
 class CastleiApp extends StatefulWidget {
@@ -1228,4 +1215,27 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+/// Imports the bundled starter puzzles on first launch.
+Future<void> _seedStarterPuzzles(Repository repo) async {
+  if ((await repo.db.rows('SELECT id FROM puzzles LIMIT 1')).isNotEmpty) return;
+  final puzzles = jsonDecode(
+    await rootBundle.loadString('assets/puzzles/starter.json'),
+  ) as List;
+  await repo.db.transaction(() async {
+    for (final p in puzzles) {
+      await repo.db.execute(
+        'INSERT OR IGNORE INTO puzzles VALUES(?,?,?,?,?,?)',
+        [
+          p['id'],
+          'starter',
+          p['fen'],
+          jsonEncode(p['moves']),
+          p['rating'],
+          p['themes'],
+        ],
+      );
+    }
+  });
 }

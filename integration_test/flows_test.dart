@@ -71,6 +71,8 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await t.ensureVisible(find.text('Review whole game'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Review whole game'));
     await waitFor(t, find.textContaining('Review 2/2'), seconds: 60);
     expect(t.takeException(), isNull);

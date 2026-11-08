@@ -48,6 +48,7 @@ class CloudBackup {
 
   /// Watches for changes and tries a backup when the app returns after a day.
   static void attach(Repository repo) {
+    _repo?.changes.removeListener(_markDirty);
     _repo = repo;
     repo.changes.addListener(_markDirty);
     AccountService.instance.addListener(() {
@@ -60,11 +61,16 @@ class CloudBackup {
   static Future<void> _markDirty() async {
     final repo = _repo;
     if (repo == null) return;
-    if (await repo.preference('cloudDirtySince', 0) == 0) {
-      await repo.setPreference(
-        'cloudDirtySince',
-        DateTime.now().millisecondsSinceEpoch,
-      );
+    try {
+      if (await repo.preference('cloudDirtySince', 0) == 0) {
+        await repo.setPreference(
+          'cloudDirtySince',
+          DateTime.now().millisecondsSinceEpoch,
+        );
+      }
+    } catch (_) {
+      // Background bookkeeping must never surface as an unhandled error
+      // (for example if the database was closed during a restore).
     }
   }
 
@@ -90,16 +96,20 @@ class CloudBackup {
     final repo = _repo;
     if (repo == null || !available || _running) return;
     if (!RemoteSettings.cloudBackupEnabled) return;
-    if (await repo.preference('cloudBackup', true) != true) return;
-    final last = await repo.preference('lastCloudBackup', 0) as int;
-    final dirty = await repo.preference('cloudDirtySince', 0) as int;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    if (dirty == 0 && last != 0) return; // nothing changed since last backup
-    final gap = Duration(milliseconds: now - last);
-    if (!force && last != 0 && gap < const Duration(hours: 24)) return;
-    if (force && gap < minGap) return;
-    if (!await _onWifi()) return; // retried on the next trigger
-    await backupNow(reason: reason);
+    try {
+      if (await repo.preference('cloudBackup', true) != true) return;
+      final last = await repo.preference('lastCloudBackup', 0) as int;
+      final dirty = await repo.preference('cloudDirtySince', 0) as int;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (dirty == 0 && last != 0) return; // nothing changed since last backup
+      final gap = Duration(milliseconds: now - last);
+      if (!force && last != 0 && gap < const Duration(hours: 24)) return;
+      if (force && gap < minGap) return;
+      if (!await _onWifi()) return; // retried on the next trigger
+      await backupNow(reason: reason);
+    } catch (_) {
+      // Automatic backup is best effort; failures are retried on the next trigger.
+    }
   }
 
   /// Uploads a backup immediately. Returns null on success or a message.

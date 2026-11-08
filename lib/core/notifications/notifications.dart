@@ -11,6 +11,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../firebase_options.dart';
 import '../cloud/remote_config.dart';
 import '../diagnostics/analytics.dart';
+import '../diagnostics/env.dart';
 import '../storage/repository.dart';
 
 /// First occurrence of [minutes] since midnight at or after [from].
@@ -147,9 +148,9 @@ class Notifications {
 
   /// Contextual one-time prompt, e.g. after the first finished game.
   static Future<void> maybePromptOnce(Repository repo) async {
-    if (!ready || await repo.preference('notifPrompted', false) == true) {
-      return;
-    }
+    // A system permission dialog would stall automated test runs.
+    if (!ready || runningUnderTest) return;
+    if (await repo.preference('notifPrompted', false) == true) return;
     await repo.setPreference('notifPrompted', true);
     if (await ensurePermission()) {
       Analytics.log('notifications_permission', {'result': 'granted'});

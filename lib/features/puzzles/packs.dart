@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
 import '../../core/storage/repository.dart';
+import '../../core/diagnostics/crash.dart';
 import '../../core/diagnostics/perf.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
@@ -46,7 +47,11 @@ class _PackState extends State<PackScreen> {
     try {
       final uri = Uri.parse(base);
       if (uri.scheme != 'https') throw FormatException('HTTPS required');
-      final response = await http.get(uri).timeout(const Duration(seconds: 20));
+      final response = await Perf.http('catalog', (report) async {
+        final r = await http.get(uri).timeout(const Duration(seconds: 20));
+        report(r.statusCode, r.bodyBytes.length);
+        return r;
+      });
       if (response.statusCode != 200 ||
           response.bodyBytes.length > 1024 * 1024) {
         throw FormatException('Invalid catalog response');
@@ -60,8 +65,9 @@ class _PackState extends State<PackScreen> {
         'catalog_refresh',
         metrics: {'ms': timer.elapsedMilliseconds, 'packs': packs.length},
       );
-    } catch (e) {
+    } catch (e, st) {
       status = '$e';
+      CrashReporting.nonFatal('catalog_refresh', e, st);
     }
     if (mounted) setState(() => busy = false);
   }
@@ -146,8 +152,9 @@ class _PackState extends State<PackScreen> {
           'kb': bytes.length ~/ 1024,
         },
       );
-    } catch (e) {
+    } catch (e, st) {
       status = 'Installation failed: $e';
+      CrashReporting.nonFatal('pack_install', e, st);
     } finally {
       client.close();
       if (mounted) setState(() => busy = false);

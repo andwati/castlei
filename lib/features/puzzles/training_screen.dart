@@ -52,6 +52,7 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
   }
 
   Future<void> load() async {
+    await widget.repo.seeding;
     final db = widget.repo.db;
     List<Map<String, dynamic>> rows;
     if (opening) {

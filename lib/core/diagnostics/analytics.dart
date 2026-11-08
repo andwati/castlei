@@ -3,7 +3,7 @@ import 'package:firebase_in_app_messaging/firebase_in_app_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../storage/repository.dart';
-import 'crash.dart' show scrub;
+import 'crash.dart' show CrashReporting, scrub;
 
 /// Anonymous usage analytics (Firebase Analytics). On by default, switchable in
 /// Settings. Events carry only coarse categories and counts — never positions,
@@ -54,6 +54,8 @@ class Analytics {
   }
 
   static void screen(String name) {
+    CrashReporting.breadcrumb('screen:$name');
+    CrashReporting.key('feature', name);
     if (!enabled) return;
     FirebaseAnalytics.instance
         .logScreenView(screenName: name, screenClass: name)

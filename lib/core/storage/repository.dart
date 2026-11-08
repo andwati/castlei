@@ -13,6 +13,9 @@ class Repository {
   /// backup listens to know when a new backup is worthwhile.
   final changes = ValueNotifier<int>(0);
   void touch() => changes.value++;
+
+  /// First-run starter-puzzle import; screens that need puzzles await it.
+  Future<void>? seeding;
   Future<void> save(ChessGame g) => db.transaction(() async {
     await db.execute(
       'INSERT INTO games(id,title,source,root_fen,headers,result,created,updated,favorite,settings,current_node,assisted) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,headers=excluded.headers,result=excluded.result,updated=excluded.updated,favorite=excluded.favorite,settings=excluded.settings,current_node=excluded.current_node,assisted=excluded.assisted',
