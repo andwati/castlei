@@ -156,6 +156,7 @@ class HomeShell extends StatefulWidget {
 
 class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
   StreamSubscription<String>? _taps;
+  List<Timer> _bannerTimers = [];
   String _bannerId = '', _bannerText = '';
   int tab = 0;
 
@@ -166,15 +167,19 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     _taps = Notifications.taps.stream.listen(_onNotificationTap);
     _setupShortcuts();
     // Remote Config arrives asynchronously; check a couple of times early on.
-    for (final seconds in [3, 12]) {
-      Future<void>.delayed(Duration(seconds: seconds), _loadBanner);
-    }
+    _bannerTimers = [
+      for (final seconds in [3, 12])
+        Timer(Duration(seconds: seconds), _loadBanner),
+    ];
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _taps?.cancel();
+    for (final t in _bannerTimers) {
+      t.cancel();
+    }
     super.dispose();
   }
 
