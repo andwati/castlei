@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../../firebase_options.dart';
 import '../storage/repository.dart';
 import 'env.dart';
+import 'log.dart';
 
 const appVersion = '1.0.0+1';
 const engineVersion = 'stockfish-18';
@@ -115,6 +116,7 @@ class CrashReporting {
 
   /// Adds a short breadcrumb to the next crash report (scrubbed, bounded).
   static void breadcrumb(String message) {
+    DiagnosticsLog.add('event', message);
     if (!enabled) return;
     FirebaseCrashlytics.instance.log(scrub(message));
   }
@@ -131,26 +133,12 @@ class CrashReporting {
     Object error,
     StackTrace stack,
   ) async {
+    DiagnosticsLog.add('error', '$feature: ${SanitizedError(error)}');
     if (!enabled) return;
     await FirebaseCrashlytics.instance.recordError(
       SanitizedError(error),
       stack,
       reason: feature,
     );
-  }
-
-  /// Sends a harmless test report so you can confirm delivery in the console.
-  static Future<bool> sendTest() async {
-    if (!available) return false;
-    final crashlytics = FirebaseCrashlytics.instance;
-    await crashlytics.setCrashlyticsCollectionEnabled(true);
-    await crashlytics.recordError(
-      StateError('Castlei test report'),
-      StackTrace.current,
-      reason: 'manual-test',
-    );
-    await crashlytics.sendUnsentReports();
-    await crashlytics.setCrashlyticsCollectionEnabled(enabled);
-    return true;
   }
 }

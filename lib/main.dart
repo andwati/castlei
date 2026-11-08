@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'core/diagnostics/crash.dart';
+import 'core/diagnostics/log.dart';
 import 'core/diagnostics/perf.dart';
 import 'core/diagnostics/analytics.dart';
 import 'core/cloud/account.dart';
@@ -54,6 +55,7 @@ Future<void> main() async {
   );
   unawaited(() async {
     // Local-only services first; none of this may delay the first frame.
+    await DiagnosticsLog.attach(repo);
     await Notifications.start(repo);
     await CrashReporting.start(repo);
     if (!CrashReporting.available) return;
@@ -78,6 +80,8 @@ Future<void> main() async {
       'dartchess',
       'Cburnett pieces',
       'Lichess puzzles',
+      'Lichess opening names',
+      'Fraunces typeface',
     ], await rootBundle.loadString('assets/NOTICE.txt'));
   });
   runApp(CastleiApp(repo: repo));

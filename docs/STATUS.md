@@ -41,7 +41,8 @@ Pieces slide between squares (disabled with reduced motion), original synthesize
 - Android configured (`google-services.json`, kept out of git; CI uses the `GOOGLE_SERVICES_JSON` base64 secret or a placeholder). `lib/firebase_options.dart` covers Android and iOS; iOS is untested.
 - **On by default (owner decision; the original plan said opt-in).** The preference key is `crashReports`, user-switchable in Settings. Restoring a backup keeps this device's own choice. Debug runs never report.
 - Reports are sanitized (`lib/core/diagnostics/crash.dart`): error type plus a scrubbed message with FEN, PGN headers and file paths removed; only app and engine version are attached. Unit-tested.
-- Settings has a "Send a test report" action. The app confirms the SDK accepted it; arrival in the Firebase console has not been confirmed from here, so check the Crashlytics dashboard for a "StateError: Castlei test report" non-fatal.
+- The test-report button was replaced by **Settings → Privacy → Diagnostics**: a reviewable snapshot (versions, switches, counts, recent scrubbed events; no chess content, names or e-mail) that the user can copy or share. Nothing is sent automatically. Arrival of Crashlytics data in the console is still unconfirmed from here.
+- About shows version and build number (from the installed package) and an "Open-source software" screen (key components and every registered package license); Flutter's built-in license page, with its "Powered by Flutter" line, is no longer used.
 - Native (Stockfish) crash symbolication is opt-in: `ORG_GRADLE_PROJECT_uploadNativeSymbols=true flutter build apk --release`.
 
 # Known limitations / findings

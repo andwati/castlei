@@ -12,3 +12,5 @@ Castlei keeps your games, studies, drills and statistics in a local database on 
 | Push announcements | Default on | Firebase Cloud Messaging topic `announcements` | Settings → Notifications |
 
 Never collected: positions (FEN), moves, PGN, comments, game titles, names, file names or contents. Error messages are scrubbed of FEN strings, PGN headers and file paths before they are sent, and event values are short categories or bucketed counts. Advertising IDs are not collected. Local reminders are scheduled on the device and send nothing.
+
+Settings → Privacy and diagnostics → **Diagnostics** shows a snapshot of what Castlei knows on the device (versions, switches, counts, recent scrubbed events). It is only shared if you tap Send diagnostics.

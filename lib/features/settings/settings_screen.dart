@@ -1,8 +1,9 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../core/app_info.dart';
 import '../../core/cloud/account.dart';
 import '../../core/cloud/cloud_backup.dart';
 import '../../core/diagnostics/analytics.dart';
@@ -12,7 +13,9 @@ import '../../core/engine/engine.dart';
 import '../../core/storage/repository.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
+import 'diagnostics_screen.dart';
 import 'notification_settings.dart';
+import 'open_source_screen.dart';
 import 'preferences_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -47,6 +50,7 @@ class _SettingsState extends State<SettingsScreen> {
       loaded = false;
   int lastBackup = 0;
   bool busy = false;
+  PackageInfo? info;
   final account = AccountService.instance;
 
   @override
@@ -55,6 +59,9 @@ class _SettingsState extends State<SettingsScreen> {
     account.addListener(_refresh);
     CloudBackup.changed.addListener(_refresh);
     _load();
+    PackageInfo.fromPlatform().then((i) {
+      if (mounted) setState(() => info = i);
+    });
     Analytics.screen('settings');
   }
 
@@ -423,41 +430,47 @@ class _SettingsState extends State<SettingsScreen> {
                 _load();
               },
             ),
-            if (CrashReporting.available && crash)
-              ListTile(
-                leading: const Icon(Icons.send_outlined),
-                title: const Text('Send a test crash report'),
-                subtitle: const Text(
-                  'Confirms delivery to the Firebase console.',
-                ),
-                onTap: () => widget.guard(() async {
-                  final ok = await CrashReporting.sendTest();
-                  _snack(
-                    ok ? 'Test report sent' : 'Crash reporting is unavailable',
-                  );
-                }),
+            ListTile(
+              leading: const Icon(Icons.fact_check_outlined),
+              title: const Text('Diagnostics'),
+              subtitle: const Text(
+                'Review a snapshot of the data collected on this device and send it to the developer.',
               ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DiagnosticsScreen(repo: widget.repo),
+                ),
+              ),
+            ),
           ],
         ),
         const SectionLabel('About'),
         GroupCard(
           children: [
-            const ListTile(
-              leading: Icon(Icons.castle_outlined),
-              title: Text('Castlei 1.0.0'),
-              subtitle: Text('Stockfish 18 · GPL-3.0'),
+            ListTile(
+              leading: const Icon(Icons.castle_outlined),
+              title: const Text('Castlei'),
+              subtitle: Text(
+                info == null
+                    ? 'Chess engine: Stockfish 18'
+                    : 'Version ${info!.version} (build ${displayBuild(info!.buildNumber)})\nChess engine: Stockfish 18',
+              ),
             ),
             ListTile(
-              leading: const Icon(Icons.description_outlined),
-              title: const Text('Open-source licenses'),
+              leading: const Icon(Icons.code_rounded),
+              title: const Text('Open-source software'),
+              subtitle: const Text('The projects Castlei is built on'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () =>
-                  showLicensePage(context: context, applicationName: 'Castlei'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OpenSourceScreen()),
+              ),
             ),
           ],
         ),
         if (!loaded) const SizedBox.shrink(),
-        if (Platform.isAndroid) const SizedBox.shrink(),
       ],
     ),
   );

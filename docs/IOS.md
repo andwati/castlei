@@ -31,7 +31,7 @@ Free Apple IDs work for installing on your own phone; builds expire after 7 days
 1. `pod install` succeeds with the forwarder-based `castlei_native` pod.
 2. The engine initializes (the app reports an engine error on Play if the symbol lookup or NNUE embedding failed).
 3. Release builds keep the exported `castlei_*` symbols (if not, set Build Settings > Deployment > Strip Style to "Non-Global Symbols" for Runner).
-4. Crashlytics dSYM upload phase runs in Release archives; use Settings > "Send a test report" and check the Firebase console.
+4. Crashlytics dSYM upload phase runs in Release archives; check the Crashlytics dashboard after a release run (and a deliberate test crash if needed).
 5. Performance and Crashlytics appear for the iOS app in the console after a release run.
 6. Safe areas, large text and VoiceOver on a real iPhone; haptics.
 7. Reminders: the notification permission prompt appears after your first finished game or when you enable a reminder; check that scheduled reminders fire.
