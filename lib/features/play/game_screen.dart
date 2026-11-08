@@ -260,19 +260,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         ),
                         label: Text(state.paused ? 'Resume' : 'Pause'),
                       ),
-                    OutlinedButton.icon(
-                      onPressed: g.current == null ? null : cubit.undo,
-                      icon: const Icon(Icons.undo),
-                      label: const Text('Take back'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        setState(() => hintLevel = (hintLevel + 1).clamp(1, 2));
-                        await cubit.hint();
-                      },
-                      icon: const Icon(Icons.lightbulb_outline),
-                      label: const Text('Hint'),
-                    ),
+                    if (g.result == '*')
+                      OutlinedButton.icon(
+                        onPressed: g.current == null ? null : cubit.undo,
+                        icon: const Icon(Icons.undo),
+                        label: const Text('Take back'),
+                      ),
+                    if (g.result == '*')
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          setState(
+                            () => hintLevel = (hintLevel + 1).clamp(1, 2),
+                          );
+                          await cubit.hint();
+                        },
+                        icon: const Icon(Icons.lightbulb_outline),
+                        label: const Text('Hint'),
+                      ),
                     if (!cubit.canClaim && cubit.intendedClaims.isNotEmpty)
                       TextButton(
                         onPressed: () async {

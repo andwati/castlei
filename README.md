@@ -9,7 +9,7 @@ Toolchain pins are in `docs/TOOLCHAIN.md`.
 flutter pub get
 flutter analyze && flutter test
 flutter run -d <android device>
-flutter build apk --release   # needs owner signing config, otherwise debug-signed test build
+flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64   # debug-signed unless you add a signing config
 ```
 Optional: `--dart-define=CASTLEI_CATALOG_URL=...` enables puzzle pack downloads (see `catalog/README.md`). Crash reporting is opt-in and requires your own Firebase config; without it the app runs normally.
 

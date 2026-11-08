@@ -17,7 +17,6 @@
 
 # Known limitations / findings
 - Debug builds started from the launcher (not via `flutter run`) hang on the splash screen; use release/profile for standalone installs.
-- Release APK is ~365 MB (bundled NNUE + native libs for several ABIs); consider ABI splits.
-- Take back / Hint buttons remain visible on finished games.
+- Each ABI's engine library embeds the 109 MB NNUE network. Build with `flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64` (arm64 APK ~137 MB, x86_64 ~139 MB; a universal build is ~365 MB).
 - Dead-position detection relies on dartchess material rules; exotic dead positions are not proven.
 - Annotation extensions (`[%cal]`, `[%csl]`) are not rendered by every other app. Backups are unencrypted.
