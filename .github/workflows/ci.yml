@@ -17,6 +17,11 @@ permissions:
 # Edit these in the repository settings (Settings > Secrets and variables > Actions >
 # Variables). The text after || is the default used when a variable is not set.
 env:
+  CASTLEI_CCACHE: '1'
+  CCACHE_DIR: /home/runner/.cache/ccache
+  CCACHE_MAXSIZE: 600M
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
   FLUTTER_VERSION: ${{ vars.FLUTTER_VERSION || '3.47.9' }}
   FLUTTER_CHANNEL: ${{ vars.FLUTTER_CHANNEL || 'stable' }}
   JAVA_VERSION: ${{ vars.JAVA_VERSION || '17' }}
@@ -29,6 +34,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Free disk space (the runner disk filled up while saving caches)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/share/swift /usr/local/share/powershell /opt/hostedtoolcache/CodeQL
+          docker system prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1
       - name: Secret scan
         run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --no-git --source /repo --no-banner --redact
       - uses: actions/setup-java@v4
@@ -41,6 +51,18 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
+      - name: Cache the Stockfish source and networks
+        uses: actions/cache@v4
+        with:
+          path: native/stockfish
+          key: engine-${{ hashFiles('tool/fetch_engine.sh') }}
+      - name: Install ccache and restore its cache
+        run: sudo apt-get install -y -qq ccache
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ runner.os }}-
       - name: Limit Gradle memory (the runner has about 7 GB)
         run: |
           mkdir -p ~/.gradle
