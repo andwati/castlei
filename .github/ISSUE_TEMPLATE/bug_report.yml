@@ -1,0 +1,20 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: {label: What happened, description: What you expected and what you saw}
+    validations: {required: true}
+  - type: textarea
+    id: steps
+    attributes: {label: Steps to reproduce}
+  - type: input
+    id: version
+    attributes: {label: Castlei version, description: Settings → About, placeholder: "1.0.0 (build 1)"}
+  - type: input
+    id: device
+    attributes: {label: Device and Android version}
+  - type: textarea
+    id: diag
+    attributes: {label: Diagnostics report, description: "Optional: Settings → Privacy → Diagnostics → Copy (contains no chess content or personal data)."}

@@ -1,24 +1,4 @@
 {
-  "flutter": {
-    "platforms": {
-      "android": {
-        "default": {
-          "projectId": "castlei",
-          "appId": "1:PROJECT_NUMBER:android:REDACTED_APP_ID",
-          "fileOutput": "android/app/google-services.json"
-        }
-      },
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "castlei",
-          "configurations": {
-            "android": "1:PROJECT_NUMBER:android:REDACTED_APP_ID",
-            "ios": "1:PROJECT_NUMBER:ios:REDACTED_APP_ID"
-          }
-        }
-      }
-    }
-  },
   "firestore": {
     "database": "(default)",
     "location": "nam5",

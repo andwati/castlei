@@ -1,7 +1,7 @@
 name: CI
 # One CI run for the whole repository at a time. A new push cancels whatever is
-# running and starts again on the new code. Android runs first; iOS (a
-# costly macOS runner) only starts after Android passes, never in parallel.
+# running and starts again on the new code. iOS is not built in CI yet (see
+# docs/IOS.md); it returns when there is an iOS device and Apple account.
 on:
   pull_request:
   push:
@@ -29,6 +29,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Secret scan
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --no-git --source /repo --no-banner --redact
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -39,16 +41,21 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
-      - name: Firebase config (secret or placeholder)
+      - name: Limit Gradle memory (the runner has about 7 GB)
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError" >> ~/.gradle/gradle.properties
+          echo "org.gradle.workers.max=2" >> ~/.gradle/gradle.properties
+      - name: Firebase config (secrets, or placeholders as a contributor build has)
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          FIREBASE_ENV_JSON: ${{ secrets.FIREBASE_ENV_JSON }}
         run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
-          else
-            cat > android/app/google-services.json <<'JSON'
-          {"project_info":{"project_number":"0","project_id":"ci-placeholder"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.andwati.castlei"}},"api_key":[{"current_key":"placeholder"}]}],"configuration_version":"1"}
-          JSON
+          ./tool/dev_setup.sh
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json; fi
+          if [ -n "$FIREBASE_ENV_JSON" ]; then
+            echo "$FIREBASE_ENV_JSON" | base64 -d > firebase.env.json
+            echo "FIREBASE_DEFINES=--dart-define-from-file=firebase.env.json" >> "$GITHUB_ENV"
           fi
       - run: ./tool/retry.sh 3 20 flutter pub get
       - run: ./tool/fetch_engine.sh
@@ -59,35 +66,8 @@ jobs:
       - name: Unit and widget tests
         run: ./tool/retry.sh 3 45 flutter test
       - name: Build release APK (debug-signed here; signed releases come from the Release workflow)
-        run: ./tool/retry.sh 3 45 flutter build apk --release --target-platform ${{ env.CI_ANDROID_PLATFORM }}
+        run: ./tool/retry.sh 3 45 flutter build apk --release --target-platform ${{ env.CI_ANDROID_PLATFORM }} $FIREBASE_DEFINES
       - uses: actions/upload-artifact@v4
         with:
           name: castlei-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-
-  ios:
-    name: iOS build and simulator tests
-    needs: android
-    runs-on: ${{ vars.IOS_RUNNER || 'macos-latest' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: ${{ env.FLUTTER_CHANNEL }}
-          cache: true
-      - run: ./tool/fetch_engine.sh
-      - run: ./tool/retry.sh 3 20 flutter pub get
-      - name: Build for the iOS simulator (no signing)
-        run: ./tool/retry.sh 2 45 flutter build ios --simulator --no-codesign --debug
-      - name: Boot an iPhone simulator
-        run: |
-          UDID=$(xcrun simctl list devices available | grep -m1 "iPhone" | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
-          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
-          xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
-      - name: Real Stockfish on the simulator
-        run: flutter test integration_test/engine_play_test.dart -d "$SIM_UDID"
-      - name: Core flows on the simulator
-        run: flutter test integration_test/flows_test.dart -d "$SIM_UDID"

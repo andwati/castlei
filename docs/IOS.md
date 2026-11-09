@@ -10,7 +10,7 @@ Everything is configured for iOS 16+, iPhone only, portrait.
 - Bundle ID `com.andwati.castlei`, iPhone only, iOS 16.0, original app icon set (no alpha), portrait orientation.
 - `ios/Podfile` (platform 16.0) and xcconfig includes for CocoaPods; Flutter plugins also use Swift Package Manager where supported.
 - Engine: `packages/castlei_native` pod. `Classes/*.cpp` are forwarders that compile the pinned Stockfish and `native/adapter.cpp` in place; NNUE networks are embedded with `.incbin` through the header search path. Regenerate forwarders with `tool/gen_ios_forwarders.sh`. The Dart side looks the C ABI up in the running process and falls back to `castlei_native.framework`.
-- Firebase: `lib/firebase_options.dart` (iOS app already registered), `ios/Runner/GoogleService-Info.plist` (same public client identifiers, generated from those options), Crashlytics and Performance collection on by default (user can switch both off in Settings), and an Xcode build phase "Upload Crashlytics Symbols" that finds the script for both CocoaPods and SPM layouts.
+- Firebase: `lib/firebase_options.dart` reads build-time values (`firebase.env.json`, see `docs/BUILDING.md`); `ios/Runner/GoogleService-Info.plist` is local and gitignored (`tool/dev_setup.sh` makes a placeholder, `tool/refresh_firebase_config.sh` the real one), Crashlytics and Performance collection on by default (user can switch both off in Settings), and an Xcode build phase "Upload Crashlytics Symbols" that finds the script for both CocoaPods and SPM layouts.
 - `ITSAppUsesNonExemptEncryption = false`.
 
 ## Accounts, push and Apple sign-in on iOS

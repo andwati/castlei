@@ -31,9 +31,10 @@ Note on installing: Flutter adds an offset to the Android version code per CPU t
 | `KEYSTORE_BASE64` | the release keystore | `base64 -w0 android/castlei-release.jks \| gh secret set KEYSTORE_BASE64` |
 | `KEY_PROPERTIES_BASE64` | keystore passwords and alias | `base64 -w0 android/key.properties \| gh secret set KEY_PROPERTIES_BASE64` |
 | `GOOGLE_SERVICES_JSON` | Firebase Android config (also used by the CI build) | `base64 -w0 android/app/google-services.json \| gh secret set GOOGLE_SERVICES_JSON` |
+| `FIREBASE_ENV_JSON` | the Firebase values the app is built with (`firebase.env.json`) | `base64 -w0 firebase.env.json \| gh secret set FIREBASE_ENV_JSON` |
 | `FIREBASE_SERVICE_ACCOUNT` (optional) | uploads each release to Firebase App Distribution (group `owner`) | JSON key of a service account with "Firebase App Distribution Admin"; the step is skipped when the secret is absent |
 
-Run `./tool/refresh_firebase_config.sh` and reset `GOOGLE_SERVICES_JSON` whenever the Firebase configuration changes.
+Run `./tool/refresh_firebase_config.sh` (see the script header) and reset `GOOGLE_SERVICES_JSON` and `FIREBASE_ENV_JSON` whenever the Firebase configuration changes. None of these files are in git.
 
 ## Repository variables (not secrets)
 Values that change over time are Actions **variables**, editable in GitHub: Settings → Secrets and variables → Actions → Variables. Each workflow has the same value as a default (`vars.NAME || 'default'`), so nothing breaks if a variable is missing.
@@ -46,9 +47,8 @@ Values that change over time are Actions **variables**, editable in GitHub: Sett
 | `CI_ANDROID_PLATFORM` | `android-arm64` | CI | CPU target of the CI release build |
 | `ANDROID_TARGET_PLATFORMS` | `android-arm64,android-x64` | Release | CPU targets of the published APKs |
 | `RELEASE_CERT_SHA256` | the current key's fingerprint | Release | Public SHA-256 of the signing certificate; the build fails if APKs are signed with anything else. Change it only when you rotate the key |
-| `FIREBASE_ANDROID_APP_ID` | the Android app id | Release | App Distribution target |
+| `FIREBASE_ANDROID_APP_ID` | (none; set it) | Release | App Distribution target |
 | `FIREBASE_TEST_GROUP` | `owner` | Release | App Distribution group |
-| `IOS_RUNNER` | `macos-latest` | CI | Runner label for the iOS job |
 
 ## What a release does not include yet
 - **Google Play:** Play requires an Android App Bundle. Each CPU architecture embeds the 110 MB Stockfish network, so a bundle with two architectures is large; check Play's size limits before the first upload (`flutter build appbundle --release --target-platform android-arm64,android-x64`).
@@ -59,4 +59,4 @@ Values that change over time are Actions **variables**, editable in GitHub: Sett
 Releases contain GPL-licensed software (Stockfish). Keep the written source offer (website, Terms and the in-app Open-source screen) accurate, and provide the corresponding source for the exact release to anyone who asks.
 
 ## Manual distribution
-`firebase appdistribution:distribute build/app/outputs/flutter-apk/app-arm64-v8a-release.apk --app 1:PROJECT_NUMBER:android:REDACTED_APP_ID --groups owner --project castlei`
+`firebase appdistribution:distribute build/app/outputs/flutter-apk/app-arm64-v8a-release.apk --app "$FIREBASE_ANDROID_APP_ID" --groups owner --project "$FIREBASE_PROJECT_ID"`

@@ -47,6 +47,7 @@ class CrashReporting {
   static bool enabled = false;
 
   static Future<void> start(Repository repo) async {
+    if (!DefaultFirebaseOptions.isConfigured) return;
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,

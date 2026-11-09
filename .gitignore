@@ -53,3 +53,8 @@ native/stockfish/
 *.jks
 android/key.properties
 android/app/google-services.json
+
+# Firebase client config (public identifiers, but kept out of the repo; see docs/BUILDING.md)
+firebase.env.json
+ios/Runner/GoogleService-Info.plist
+.firebaserc

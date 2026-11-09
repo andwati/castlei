@@ -273,6 +273,7 @@ class Notifications {
 /// Server announcements (Firebase Cloud Messaging) via the "announcements" topic.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  if (!DefaultFirebaseOptions.isConfigured) return;
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 

@@ -32,7 +32,7 @@ env:
   # SHA-256 of the Castlei release signing certificate (public). The build fails if
   # the APKs are signed with anything else, for example the debug-key fallback.
   RELEASE_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 || 'f285ee48cf321d2438b15aa9add26b319f6911de35cae05f6c4a74bd57a00d6a' }}
-  FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || '1:PROJECT_NUMBER:android:REDACTED_APP_ID' }}
+  FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
   FIREBASE_TEST_GROUP: ${{ vars.FIREBASE_TEST_GROUP || 'owner' }}
 
 jobs:
@@ -81,19 +81,27 @@ jobs:
             echo "tag=v$name-dry-run" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Limit Gradle memory (the runner has about 7 GB)
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError" >> ~/.gradle/gradle.properties
+          echo "org.gradle.workers.max=2" >> ~/.gradle/gradle.properties
+
       - name: Restore signing key and Firebase config from secrets
         env:
+          FIREBASE_ENV_JSON: ${{ secrets.FIREBASE_ENV_JSON }}
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEY_PROPERTIES_BASE64: ${{ secrets.KEY_PROPERTIES_BASE64 }}
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          for v in KEYSTORE_BASE64 KEY_PROPERTIES_BASE64 GOOGLE_SERVICES_JSON; do
+          for v in KEYSTORE_BASE64 KEY_PROPERTIES_BASE64 GOOGLE_SERVICES_JSON FIREBASE_ENV_JSON; do
             if [ -z "${!v}" ]; then echo "::error::Missing repository secret $v (see docs/RELEASE.md)"; exit 1; fi
           done
           echo "$KEYSTORE_BASE64"       | base64 -d > android/castlei-release.jks
           echo "$KEY_PROPERTIES_BASE64" | base64 -d > android/key.properties
           echo "$GOOGLE_SERVICES_JSON"  | base64 -d > android/app/google-services.json
-          chmod 600 android/castlei-release.jks android/key.properties
+          echo "$FIREBASE_ENV_JSON"      | base64 -d > firebase.env.json
+          chmod 600 android/castlei-release.jks android/key.properties firebase.env.json
 
       - run: ./tool/fetch_engine.sh
       - run: ./tool/retry.sh 3 20 flutter pub get
@@ -102,7 +110,7 @@ jobs:
 
       - name: Build signed release APKs (arm64 phones, x86_64 emulators)
         # The build downloads SQLite and the Kotlin compiler from GitHub; retry transient 504s.
-        run: ./tool/retry.sh 3 60 flutter build apk --release --split-per-abi --target-platform ${{ env.ANDROID_TARGET_PLATFORMS }}
+        run: ./tool/retry.sh 3 60 flutter build apk --release --split-per-abi --target-platform ${{ env.ANDROID_TARGET_PLATFORMS }} --dart-define-from-file=firebase.env.json
 
       - name: Verify the APKs are signed with the release key
         run: |

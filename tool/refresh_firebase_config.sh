@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
-# Re-downloads the Firebase client configs after you enable Google / Apple sign-in
-# (or change any Firebase setting) so the apps pick up the new OAuth client IDs.
-# Requires: firebase login (firebase-tools), run from anywhere.
+# Downloads your Firebase client configs (after you enable sign-in providers or
+# change a setting) and writes the three local, gitignored files the build uses:
+#   android/app/google-services.json, ios/Runner/GoogleService-Info.plist, firebase.env.json
+# Requires: firebase login. Configure with environment variables, nothing is hardcoded:
+#   FIREBASE_PROJECT_ID  FIREBASE_ANDROID_APP_ID  FIREBASE_IOS_APP_ID
+# Afterwards, for CI/release secrets, see docs/RELEASE.md.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PROJECT=castlei
-ANDROID_APP=1:PROJECT_NUMBER:android:REDACTED_APP_ID
-IOS_APP=1:PROJECT_NUMBER:ios:REDACTED_APP_ID
+: "${FIREBASE_PROJECT_ID:?set FIREBASE_PROJECT_ID}"
+: "${FIREBASE_ANDROID_APP_ID:?set FIREBASE_ANDROID_APP_ID}"
+: "${FIREBASE_IOS_APP_ID:?set FIREBASE_IOS_APP_ID}"
 
-rm -f android/app/google-services.json
-firebase apps:sdkconfig android "$ANDROID_APP" --out android/app/google-services.json --project "$PROJECT"
-rm -f ios/Runner/GoogleService-Info.plist
-firebase apps:sdkconfig ios "$IOS_APP" --out ios/Runner/GoogleService-Info.plist --project "$PROJECT"
+rm -f android/app/google-services.json ios/Runner/GoogleService-Info.plist
+firebase apps:sdkconfig android "$FIREBASE_ANDROID_APP_ID" --out android/app/google-services.json --project "$FIREBASE_PROJECT_ID"
+firebase apps:sdkconfig ios "$FIREBASE_IOS_APP_ID" --out ios/Runner/GoogleService-Info.plist --project "$FIREBASE_PROJECT_ID"
 
 python3 - <<'PY'
 import json, plistlib
-a = json.load(open('android/app/google-services.json'))['client'][0]
-kinds = [o.get('client_type') for o in a.get('oauth_client', [])]
+a = json.load(open('android/app/google-services.json'))
+c = a['client'][0]
+kinds = [o.get('client_type') for o in c.get('oauth_client', [])]
 print('Android OAuth clients:', kinds or 'none (is Google sign-in enabled in Authentication?)')
 
 path = 'ios/Runner/GoogleService-Info.plist'
@@ -31,5 +34,18 @@ else:
     types.append({'CFBundleTypeRole': 'Editor', 'CFBundleURLSchemes': [reversed_id]})
     info['CFBundleURLTypes'] = types
     plistlib.dump(info, open(info_path, 'wb'))
-    print('iOS: Google sign-in URL scheme added to Info.plist')
+    print('iOS: Google sign-in URL scheme added to Info.plist (do not commit that change)')
+
+env = {
+    'FIREBASE_PROJECT_ID': a['project_info']['project_id'],
+    'FIREBASE_MESSAGING_SENDER_ID': a['project_info']['project_number'],
+    'FIREBASE_STORAGE_BUCKET': a['project_info'].get('storage_bucket', ''),
+    'FIREBASE_ANDROID_API_KEY': c['api_key'][0]['current_key'],
+    'FIREBASE_ANDROID_APP_ID': c['client_info']['mobilesdk_app_id'],
+    'FIREBASE_IOS_API_KEY': plist['API_KEY'],
+    'FIREBASE_IOS_APP_ID': plist['GOOGLE_APP_ID'],
+    'FIREBASE_IOS_BUNDLE_ID': plist.get('BUNDLE_ID', ''),
+}
+json.dump(env, open('firebase.env.json', 'w'), indent=2)
+print('wrote firebase.env.json; build with --dart-define-from-file=firebase.env.json')
 PY
