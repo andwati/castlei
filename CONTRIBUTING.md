@@ -31,3 +31,6 @@ Follow [docs/BUILDING.md](docs/BUILDING.md). You do not need a Firebase project;
 
 ## Good first areas
 Accessibility, translations, test coverage, documentation, and puzzle/opening data quality.
+
+## Dependencies
+Update packages with `./tool/update_deps.sh` (Flutter's `pub` tooling; it keeps the change only if format, analyze and tests pass). Please do not hand-edit `pubspec.lock`. Automated bots are not used.
