@@ -564,8 +564,8 @@ class _SettingsState extends State<SettingsScreen> {
               title: const Text('Castlei'),
               subtitle: Text(
                 info == null
-                    ? 'Chess engine: Stockfish 18'
-                    : 'Version ${info!.version} (build ${displayBuild(info!.buildNumber)})\nChess engine: Stockfish 18',
+                    ? 'Chess engine: Stockfish'
+                    : 'Version ${info!.version} (build ${displayBuild(info!.buildNumber)})\nChess engine: Stockfish',
               ),
             ),
             ListTile(

@@ -18,7 +18,7 @@ class _Component {
 }
 
 const _key = [
-  _Component('Stockfish 18', 'Chess engine (on-device)', 'GPL-3.0-or-later'),
+  _Component('Stockfish', 'Chess engine (on-device)', 'GPL-3.0-or-later'),
   _Component('dartchess', 'Rules, FEN, SAN and PGN', 'GPL-3.0'),
   _Component('Flutter and Dart', 'App framework', 'BSD-3-Clause'),
   _Component('Cburnett chess pieces', 'Piece artwork', 'GPL-2.0-or-later'),

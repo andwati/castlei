@@ -135,7 +135,7 @@ INDEX = page(
       </p>
       <ul class="ticks">
         <li>No account needed</li>
-        <li>Stockfish 18 on your device</li>
+        <li>Stockfish on your device</li>
         <li>Your games stay on your phone</li>
       </ul>
     </div>

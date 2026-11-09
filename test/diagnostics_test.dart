@@ -123,7 +123,7 @@ void main() {
       await t.pumpWidget(host(const OpenSourceScreen()));
       await t.pumpAndSettle();
       expect(find.text('Open-source software'), findsOneWidget);
-      expect(find.text('Stockfish 18'), findsOneWidget);
+      expect(find.text('Stockfish'), findsOneWidget);
       expect(find.text('GPL-3.0-or-later'), findsOneWidget);
       expect(find.textContaining('Powered by Flutter'), findsNothing);
       await t.scrollUntilVisible(
