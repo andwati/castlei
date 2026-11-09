@@ -35,6 +35,21 @@ Note on installing: Flutter adds an offset to the Android version code per CPU t
 
 Run `./tool/refresh_firebase_config.sh` and reset `GOOGLE_SERVICES_JSON` whenever the Firebase configuration changes.
 
+## Repository variables (not secrets)
+Values that change over time are Actions **variables**, editable in GitHub: Settings → Secrets and variables → Actions → Variables. Each workflow has the same value as a default (`vars.NAME || 'default'`), so nothing breaks if a variable is missing.
+
+| Variable | Default | Used by | Meaning |
+|---|---|---|---|
+| `FLUTTER_VERSION` | `3.47.9` | CI, Release | Flutter SDK version |
+| `FLUTTER_CHANNEL` | `stable` | CI, Release | Flutter channel |
+| `JAVA_VERSION` | `17` | CI, Release | JDK for Gradle |
+| `CI_ANDROID_PLATFORM` | `android-arm64` | CI | CPU target of the CI release build |
+| `ANDROID_TARGET_PLATFORMS` | `android-arm64,android-x64` | Release | CPU targets of the published APKs |
+| `RELEASE_CERT_SHA256` | the current key's fingerprint | Release | Public SHA-256 of the signing certificate; the build fails if APKs are signed with anything else. Change it only when you rotate the key |
+| `FIREBASE_ANDROID_APP_ID` | the Android app id | Release | App Distribution target |
+| `FIREBASE_TEST_GROUP` | `owner` | Release | App Distribution group |
+| `IOS_RUNNER` | `macos-latest` | CI | Runner label for the iOS job |
+
 ## What a release does not include yet
 - **Google Play:** Play requires an Android App Bundle. Each CPU architecture embeds the 110 MB Stockfish network, so a bundle with two architectures is large; check Play's size limits before the first upload (`flutter build appbundle --release --target-platform android-arm64,android-x64`).
 - **iOS** is prepared but not built on a Mac (see `docs/IOS.md`).

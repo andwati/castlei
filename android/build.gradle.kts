@@ -1,6 +1,10 @@
 allprojects {
     repositories {
         google()
+        // Google's mirror of Maven Central first: Maven Central sometimes redirects large
+        // artifacts (such as the Kotlin compiler jar) to GitHub release downloads, which
+        // intermittently answer 504 and break CI builds.
+        maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2/") }
         mavenCentral()
     }
 }

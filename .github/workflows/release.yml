@@ -22,10 +22,18 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# Edit these in the repository settings (Settings > Secrets and variables > Actions >
+# Variables). The text after || is the default used when a variable is not set.
 env:
+  FLUTTER_VERSION: ${{ vars.FLUTTER_VERSION || '3.47.9' }}
+  FLUTTER_CHANNEL: ${{ vars.FLUTTER_CHANNEL || 'stable' }}
+  JAVA_VERSION: ${{ vars.JAVA_VERSION || '17' }}
+  ANDROID_TARGET_PLATFORMS: ${{ vars.ANDROID_TARGET_PLATFORMS || 'android-arm64,android-x64' }}
   # SHA-256 of the Castlei release signing certificate (public). The build fails if
   # the APKs are signed with anything else, for example the debug-key fallback.
-  EXPECTED_CERT_SHA256: f285ee48cf321d2438b15aa9add26b319f6911de35cae05f6c4a74bd57a00d6a
+  RELEASE_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 || 'f285ee48cf321d2438b15aa9add26b319f6911de35cae05f6c4a74bd57a00d6a' }}
+  FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || '1:PROJECT_NUMBER:android:REDACTED_APP_ID' }}
+  FIREBASE_TEST_GROUP: ${{ vars.FIREBASE_TEST_GROUP || 'owner' }}
 
 jobs:
   release:
@@ -42,13 +50,13 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
           cache: gradle
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
-          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
 
       - name: Read the version and check it against the tag
@@ -94,7 +102,7 @@ jobs:
 
       - name: Build signed release APKs (arm64 phones, x86_64 emulators)
         # The build downloads SQLite and the Kotlin compiler from GitHub; retry transient 504s.
-        run: ./tool/retry.sh 3 60 flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64
+        run: ./tool/retry.sh 3 60 flutter build apk --release --split-per-abi --target-platform ${{ env.ANDROID_TARGET_PLATFORMS }}
 
       - name: Verify the APKs are signed with the release key
         run: |
@@ -102,7 +110,7 @@ jobs:
           for apk in build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/app-x86_64-release.apk; do
             got=$("$apksigner" verify --print-certs "$apk" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
             echo "$apk -> $got"
-            if [ "$got" != "$EXPECTED_CERT_SHA256" ]; then
+            if [ "$got" != "$RELEASE_CERT_SHA256" ]; then
               echo "::error::$apk is not signed with the Castlei release key"
               exit 1
             fi
@@ -136,7 +144,7 @@ jobs:
 
           - \`arm64-v8a\` is the build for current phones.
           - \`x86_64\` is for emulators.
-          - Verify downloads with \`SHA256SUMS.txt\`. Both APKs are signed with the Castlei release key (certificate SHA-256 \`$EXPECTED_CERT_SHA256\`).
+          - Verify downloads with \`SHA256SUMS.txt\`. Both APKs are signed with the Castlei release key (certificate SHA-256 \`$RELEASE_CERT_SHA256\`).
           - Castlei includes open-source software (Stockfish, GPL-3.0). Source code and license notices are available on request; see the in-app Open-source software screen.
 
           ---
@@ -148,8 +156,8 @@ jobs:
         if: github.ref_type == 'tag' && (github.event_name == 'push' || inputs.publish) && env.HAS_FIREBASE == 'true'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: 1:PROJECT_NUMBER:android:REDACTED_APP_ID
+          appId: ${{ env.FIREBASE_ANDROID_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          groups: owner
+          groups: ${{ env.FIREBASE_TEST_GROUP }}
           file: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           releaseNotes: Castlei ${{ steps.version.outputs.name }} (${{ steps.version.outputs.tag }})

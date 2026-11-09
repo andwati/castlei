@@ -14,6 +14,14 @@ concurrency:
 permissions:
   contents: read
 
+# Edit these in the repository settings (Settings > Secrets and variables > Actions >
+# Variables). The text after || is the default used when a variable is not set.
+env:
+  FLUTTER_VERSION: ${{ vars.FLUTTER_VERSION || '3.47.9' }}
+  FLUTTER_CHANNEL: ${{ vars.FLUTTER_CHANNEL || 'stable' }}
+  JAVA_VERSION: ${{ vars.JAVA_VERSION || '17' }}
+  CI_ANDROID_PLATFORM: ${{ vars.CI_ANDROID_PLATFORM || 'android-arm64' }}
+
 jobs:
   android:
     name: Android checks
@@ -24,12 +32,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
           cache: gradle
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
-          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
       - name: Firebase config (secret or placeholder)
         env:
@@ -50,24 +58,24 @@ jobs:
       - run: flutter analyze
       - name: Unit and widget tests
         run: ./tool/retry.sh 3 45 flutter test
-      - name: Build debug APK
-        run: ./tool/retry.sh 3 45 flutter build apk --debug --target-platform android-arm64
+      - name: Build release APK (debug-signed here; signed releases come from the Release workflow)
+        run: ./tool/retry.sh 3 45 flutter build apk --release --target-platform ${{ env.CI_ANDROID_PLATFORM }}
       - uses: actions/upload-artifact@v4
         with:
-          name: castlei-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: castlei-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
 
   ios:
     name: iOS build and simulator tests
     needs: android
-    runs-on: macos-latest
+    runs-on: ${{ vars.IOS_RUNNER || 'macos-latest' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
-          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
       - run: ./tool/fetch_engine.sh
       - run: ./tool/retry.sh 3 20 flutter pub get
