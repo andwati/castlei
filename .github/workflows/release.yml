@@ -43,6 +43,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - uses: subosito/flutter-action@v2
         with:
@@ -87,20 +88,13 @@ jobs:
           chmod 600 android/castlei-release.jks android/key.properties
 
       - run: ./tool/fetch_engine.sh
-      - run: flutter pub get
+      - run: ./tool/retry.sh 3 20 flutter pub get
       - run: flutter analyze
-      - run: flutter test
+      - run: ./tool/retry.sh 3 45 flutter test
 
       - name: Build signed release APKs (arm64 phones, x86_64 emulators)
-        run: |
-          # The build downloads a prebuilt SQLite from GitHub; retry transient failures.
-          for attempt in 1 2 3; do
-            if flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64; then
-              exit 0
-            fi
-            echo "Build attempt $attempt failed; retrying in 30 s"; sleep 30
-          done
-          exit 1
+        # The build downloads SQLite and the Kotlin compiler from GitHub; retry transient 504s.
+        run: ./tool/retry.sh 3 60 flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64
 
       - name: Verify the APKs are signed with the release key
         run: |
