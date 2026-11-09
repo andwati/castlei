@@ -132,7 +132,7 @@ jobs:
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk   "dist/castlei-$tag-x86_64.apk"
           (cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: castlei-${{ steps.version.outputs.tag }}
           path: dist/*
