@@ -1,58 +1,161 @@
-name: Release build and distribution
-# Builds the signed Android APK and delivers it with Firebase App Distribution.
-# Trigger: push a tag like v1.0.1, or run manually from the Actions tab.
+name: Release
+# Cuts a GitHub Release from a version tag.
+#   git tag -a v1.0.1 -m "Castlei 1.0.1" && git push origin v1.0.1
+# The tag must match the version in pubspec.yaml (v1.0.1 for "version: 1.0.1+N";
+# a suffix such as v1.0.1-rc.1 makes it a pre-release).
+# Run it by hand (Actions tab -> Release -> Run workflow) for a dry run that
+# builds and uploads the APKs as a workflow artifact without publishing.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
-      notes:
-        description: Release notes
-        required: false
-        default: Manual build
+      publish:
+        description: Publish a GitHub Release for the chosen ref (needs a v* tag ref)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # SHA-256 of the Castlei release signing certificate (public). The build fails if
+  # the APKs are signed with anything else, for example the debug-key fallback.
+  EXPECTED_CERT_SHA256: f285ee48cf321d2438b15aa9add26b319f6911de35cae05f6c4a74bd57a00d6a
+
 jobs:
-  android:
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
+    env:
+      # Set to 'true' when the optional FIREBASE_SERVICE_ACCOUNT secret exists.
+      HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so release notes can list the commits since the last tag
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
           channel: stable
           cache: true
+
+      - name: Read the version and check it against the tag
+        id: version
+        run: |
+          full=$(grep -E '^version:' pubspec.yaml | head -1 | awk '{print $2}')
+          name=${full%%+*}
+          build=${full##*+}
+          echo "pubspec version: $name (build $build)"
+          echo "name=$name"   >> "$GITHUB_OUTPUT"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag="$GITHUB_REF_NAME"
+            if [[ "$tag" != "v$name" && "$tag" != "v$name-"* ]]; then
+              echo "::error::Tag $tag does not match pubspec.yaml version $name. Bump pubspec.yaml or retag."
+              exit 1
+            fi
+            [[ "$tag" == *-* ]] && echo "prerelease=true" >> "$GITHUB_OUTPUT" || echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "tag=v$name-dry-run" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore signing key and Firebase config from secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEY_PROPERTIES_BASE64: ${{ secrets.KEY_PROPERTIES_BASE64 }}
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          test -n "$KEYSTORE_BASE64" && test -n "$KEY_PROPERTIES_BASE64" && test -n "$GOOGLE_SERVICES_JSON" \
-            || { echo "Missing secrets: see docs/RELEASE.md"; exit 1; }
-          echo "$KEYSTORE_BASE64" | base64 -d > android/castlei-release.jks
+          for v in KEYSTORE_BASE64 KEY_PROPERTIES_BASE64 GOOGLE_SERVICES_JSON; do
+            if [ -z "${!v}" ]; then echo "::error::Missing repository secret $v (see docs/RELEASE.md)"; exit 1; fi
+          done
+          echo "$KEYSTORE_BASE64"       | base64 -d > android/castlei-release.jks
           echo "$KEY_PROPERTIES_BASE64" | base64 -d > android/key.properties
-          echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+          echo "$GOOGLE_SERVICES_JSON"  | base64 -d > android/app/google-services.json
+          chmod 600 android/castlei-release.jks android/key.properties
+
       - run: ./tool/fetch_engine.sh
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - name: Build signed APKs (native crash symbols uploaded)
-        env:
-          ORG_GRADLE_PROJECT_uploadNativeSymbols: 'true'
-        run: flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64
+
+      - name: Build signed release APKs (arm64 phones, x86_64 emulators)
+        run: |
+          # The build downloads a prebuilt SQLite from GitHub; retry transient failures.
+          for attempt in 1 2 3; do
+            if flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64; then
+              exit 0
+            fi
+            echo "Build attempt $attempt failed; retrying in 30 s"; sleep 30
+          done
+          exit 1
+
+      - name: Verify the APKs are signed with the release key
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          for apk in build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/app-x86_64-release.apk; do
+            got=$("$apksigner" verify --print-certs "$apk" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+            echo "$apk -> $got"
+            if [ "$got" != "$EXPECTED_CERT_SHA256" ]; then
+              echo "::error::$apk is not signed with the Castlei release key"
+              exit 1
+            fi
+          done
+
+      - name: Collect release files
+        run: |
+          mkdir dist
+          tag='${{ steps.version.outputs.tag }}'
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/castlei-$tag-arm64-v8a.apk"
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk   "dist/castlei-$tag-x86_64.apk"
+          (cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
       - uses: actions/upload-artifact@v4
         with:
-          name: castlei-release-apks
-          path: build/app/outputs/flutter-apk/*-release.apk
-      - name: Deliver to testers with Firebase App Distribution
+          name: castlei-${{ steps.version.outputs.tag }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish the GitHub Release
+        if: github.ref_type == 'tag' && (github.event_name == 'push' || inputs.publish)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag='${{ steps.version.outputs.tag }}'
+          name='${{ steps.version.outputs.name }}'
+          flags=()
+          [ '${{ steps.version.outputs.prerelease }}' = 'true' ] && flags+=(--prerelease)
+          cat > /tmp/notes.md <<EOF
+          Castlei $name (build ${{ steps.version.outputs.build }}) for Android.
+
+          - \`arm64-v8a\` is the build for current phones.
+          - \`x86_64\` is for emulators.
+          - Verify downloads with \`SHA256SUMS.txt\`. Both APKs are signed with the Castlei release key (certificate SHA-256 \`$EXPECTED_CERT_SHA256\`).
+          - Castlei includes open-source software (Stockfish, GPL-3.0). Source code and license notices are available on request; see the in-app Open-source software screen.
+
+          ---
+          EOF
+          gh release create "$tag" dist/* --verify-tag --title "Castlei $name" \
+            --notes-file /tmp/notes.md --generate-notes "${flags[@]}"
+
+      - name: Deliver to testers with Firebase App Distribution (optional)
+        if: github.ref_type == 'tag' && (github.event_name == 'push' || inputs.publish) && env.HAS_FIREBASE == 'true'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: 1:PROJECT_NUMBER:android:REDACTED_APP_ID
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: owner
           file: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-          releaseNotes: ${{ github.event.inputs.notes || github.ref_name }}
+          releaseNotes: Castlei ${{ steps.version.outputs.name }} (${{ steps.version.outputs.tag }})

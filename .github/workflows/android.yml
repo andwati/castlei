@@ -32,7 +32,13 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test tool
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build apk --debug --target-platform android-arm64
+      - name: Build debug APK (retried, since the build downloads a prebuilt SQLite from GitHub)
+        run: |
+          for attempt in 1 2 3; do
+            flutter build apk --debug --target-platform android-arm64 && exit 0
+            echo "Build attempt $attempt failed; retrying in 30 s"; sleep 30
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: castlei-debug-apk

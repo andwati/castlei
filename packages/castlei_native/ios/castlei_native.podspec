@@ -10,6 +10,13 @@ Pod::Spec.new do |s|
   # Forwarder files include the real sources in place (CocoaPods cannot reliably
   # glob outside the pod directory). Regenerate with tool/gen_ios_forwarders.sh.
   s.source_files = 'Classes/**/*.{cpp,h}'
+  # Stockfish embeds its neural networks with .incbin, which the assembler resolves
+  # relative to the compile directory (Pods/). Stage the downloaded nets there first.
+  s.script_phases = [{
+    :name => 'Stage NNUE networks',
+    :script => 'set -e; src="${PODS_TARGET_SRCROOT}/../../../native/stockfish/src"; for f in "$src"/*.nnue; do [ -f "$f" ] && { [ -f "${PODS_ROOT}/$(basename "$f")" ] || cp "$f" "${PODS_ROOT}/"; }; done; true',
+    :execution_position => :before_compile
+  }]
   s.dependency 'Flutter'
   s.platform = :ios, '16.0'
   s.pod_target_xcconfig = {
