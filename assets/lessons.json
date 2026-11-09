@@ -1,0 +1,986 @@
+[
+  {
+    "id": "lesson-01",
+    "module": "Foundations",
+    "title": "Board and notation",
+    "body": "Files run a\u2013h and ranks run 1\u20138. White starts on ranks 1\u20132; Black starts on ranks 7\u20138. Board orientation changes your view, never the square names. Read a square by file first, then rank.",
+    "exercises": [
+      {
+        "fen": "4k3/8/8/8/3N4/8/8/4K3 w - - 0 1",
+        "goal": "Which square holds the white knight?",
+        "hint": "Read its file, then its rank.",
+        "options": [
+          "d4",
+          "e4",
+          "d5"
+        ],
+        "correct": 0
+      },
+      {
+        "fen": "7k/8/2B5/8/8/8/8/4K3 w - - 0 1",
+        "goal": "Which square holds the white bishop?",
+        "hint": "The bishop is on the c-file.",
+        "options": [
+          "c5",
+          "c6",
+          "f3"
+        ],
+        "correct": 1
+      },
+      {
+        "fen": "4k3/8/8/8/8/8/7R/4K3 w - - 0 1",
+        "goal": "Which square holds the white rook?",
+        "hint": "Use the coordinates even when the view changes.",
+        "options": [
+          "a7",
+          "h7",
+          "h2"
+        ],
+        "correct": 2
+      }
+    ]
+  },
+  {
+    "id": "lesson-02",
+    "module": "Foundations",
+    "title": "How the pieces move",
+    "body": "Rooks travel along files and ranks. Bishops travel diagonally; queens combine both. Knights jump in an L shape. Kings move one square without entering attack. Pawns advance toward promotion and capture diagonally.",
+    "exercises": [
+      {
+        "fen": "7k/8/8/8/8/8/R7/K7 w - - 0 1",
+        "goal": "Move the rook to a7.",
+        "hint": "Stay on the a-file.",
+        "solutions": [
+          [
+            "a2a7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/8/8/8/8/K1B5 w - - 0 1",
+        "goal": "Move the bishop to g5.",
+        "hint": "Follow the diagonal.",
+        "solutions": [
+          [
+            "c1g5"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/8/8/8/8/KN6 w - - 0 1",
+        "goal": "Develop the knight to c3.",
+        "hint": "Two ranks up and one file across.",
+        "solutions": [
+          [
+            "b1c3"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-03",
+    "module": "Foundations",
+    "title": "Captures and protection",
+    "body": "A capture replaces an enemy piece on its square. Before capturing, check whether the opponent can recapture. A defended piece has a friendly piece that could recapture an attacker. Pawns capture diagonally, not straight ahead.",
+    "exercises": [
+      {
+        "fen": "7k/8/8/3p4/4P3/8/8/K7 w - - 0 1",
+        "goal": "Capture the pawn on d5.",
+        "hint": "White pawns capture one rank forward diagonally.",
+        "solutions": [
+          [
+            "e4d5"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/2n5/8/8/8/8/2R5/K7 w - - 0 1",
+        "goal": "Capture the knight on c7.",
+        "hint": "Rooks capture along an open file.",
+        "solutions": [
+          [
+            "c2c7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/7n/8/8/8/8/K1B5 w - - 0 1",
+        "goal": "Capture the knight on h6.",
+        "hint": "Trace the diagonal from c1.",
+        "solutions": [
+          [
+            "c1h6"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-04",
+    "module": "Foundations",
+    "title": "Answering check",
+    "body": "When your king is attacked, you must answer immediately. Move the king, capture the attacker, or block a sliding attack. A knight check cannot be blocked. You may never leave your own king in check.",
+    "exercises": [
+      {
+        "fen": "k3r3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "goal": "Escape the rook check by moving to d1.",
+        "hint": "Step off the e-file.",
+        "solutions": [
+          [
+            "e1d1"
+          ]
+        ]
+      },
+      {
+        "fen": "k3r3/8/8/8/8/2B5/8/4K3 w - - 0 1",
+        "goal": "Block the rook check on e5.",
+        "hint": "A bishop can interpose between king and rook.",
+        "solutions": [
+          [
+            "c3e5"
+          ]
+        ]
+      },
+      {
+        "fen": "k7/8/8/8/8/8/4r3/4K3 w - - 0 1",
+        "goal": "Capture the unprotected checking rook.",
+        "hint": "The attacker is beside your king.",
+        "solutions": [
+          [
+            "e1e2"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-05",
+    "module": "Essential rules",
+    "title": "Checkmate and stalemate",
+    "body": "Checkmate means the king is in check and has no legal reply. Stalemate means the side to move has no legal move but is not in check: the game is drawn. When winning with a queen, always leave a legal reply unless delivering mate.",
+    "exercises": [
+      {
+        "fen": "7k/6Q1/5K2/8/8/8/8/8 b - - 0 1",
+        "goal": "Black to move: what is the result?",
+        "hint": "The queen attacks h8 and covers the escape squares.",
+        "options": [
+          "Checkmate",
+          "Stalemate",
+          "Play continues"
+        ],
+        "correct": 0
+      },
+      {
+        "fen": "7k/5K2/6Q1/8/8/8/8/8 b - - 0 1",
+        "goal": "Black to move: what is the result?",
+        "hint": "Is h8 attacked? Can the king move anywhere?",
+        "options": [
+          "Checkmate",
+          "Stalemate",
+          "Play continues"
+        ],
+        "correct": 1
+      },
+      {
+        "fen": "7k/8/5KQ1/8/8/8/8/8 w - - 0 1",
+        "goal": "Deliver checkmate with Qg7.",
+        "hint": "Protect the queen with your king.",
+        "solutions": [
+          [
+            "g6g7"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-06",
+    "module": "Essential rules",
+    "title": "Castling safely",
+    "body": "Castling moves the king two squares toward a rook and places the rook beside it. Neither piece may have moved; the path must be clear. The king cannot castle out of check, through check, or into check.",
+    "exercises": [
+      {
+        "fen": "4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+        "goal": "Castle kingside.",
+        "hint": "Move the king from e1 to g1.",
+        "solutions": [
+          [
+            "e1g1"
+          ]
+        ]
+      },
+      {
+        "fen": "4k3/8/8/8/8/8/8/R3K3 w Q - 0 1",
+        "goal": "Castle queenside.",
+        "hint": "Move the king from e1 to c1.",
+        "solutions": [
+          [
+            "e1c1"
+          ]
+        ]
+      },
+      {
+        "fen": "k4r2/8/8/8/8/8/8/4K2R w - - 0 1",
+        "goal": "Why can White not castle kingside?",
+        "hint": "The king must cross f1.",
+        "options": [
+          "The king would cross an attacked square",
+          "The rook is too far away",
+          "Castling is never allowed with one rook"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-07",
+    "module": "Essential rules",
+    "title": "Promotion",
+    "body": "A pawn reaching its last rank must become a queen, rook, bishop, or knight. Usually a queen is strongest. Underpromotion can give a needed check, win material, or avoid stalemate. Promotion can also happen while capturing.",
+    "exercises": [
+      {
+        "fen": "8/P6k/8/8/8/8/8/K7 w - - 0 1",
+        "goal": "Promote the a-pawn to a queen.",
+        "hint": "Choose the queen in the promotion picker.",
+        "solutions": [
+          [
+            "a7a8q"
+          ]
+        ]
+      },
+      {
+        "fen": "7r/6Pk/8/8/8/8/8/K7 w - - 0 1",
+        "goal": "Capture the rook and promote to a queen.",
+        "hint": "A pawn may capture onto its promotion square.",
+        "solutions": [
+          [
+            "g7h8q"
+          ]
+        ]
+      },
+      {
+        "fen": "8/2P4k/8/8/8/8/8/K7 w - - 0 1",
+        "goal": "Promote to a knight.",
+        "hint": "Try the knight option in the promotion picker.",
+        "solutions": [
+          [
+            "c7c8n"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-08",
+    "module": "Essential rules",
+    "title": "En passant and draws",
+    "body": "Immediately after an enemy pawn advances two squares beside your pawn, you may capture it as though it moved one square: en passant. The right expires after one reply. Draws also include stalemate, insufficient mating material, and claimable repetition or the fifty-move rule.",
+    "exercises": [
+      {
+        "fen": "7k/8/8/3pP3/8/8/8/K7 w - d6 0 1",
+        "goal": "Capture en passant on d6.",
+        "hint": "The black pawn just advanced from d7 to d5.",
+        "solutions": [
+          [
+            "e5d6"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/8/3Pp3/8/8/K7 b - d3 0 1",
+        "goal": "Black: capture en passant on d3.",
+        "hint": "The white pawn just advanced from d2 to d4.",
+        "solutions": [
+          [
+            "e4d3"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/8/8/8/8/K7 w - - 0 1",
+        "goal": "Can either side checkmate with only these kings?",
+        "hint": "Kings cannot stand next to each other.",
+        "options": [
+          "No: insufficient mating material",
+          "Yes: with opposition",
+          "Only White can win"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-09",
+    "module": "Tactical patterns",
+    "title": "Forks",
+    "body": "A fork attacks two targets at once. Knights are especially useful because their attacks cannot be blocked. A fork with check forces the opponent to save the king first. Look for a landing square that attacks both targets.",
+    "exercises": [
+      {
+        "fen": "r3k3/8/8/1N6/8/8/8/7K w - - 0 1",
+        "goal": "Fork the king and rook with Nc7+.",
+        "hint": "From c7 the knight attacks e8 and a8.",
+        "solutions": [
+          [
+            "b5c7"
+          ]
+        ]
+      },
+      {
+        "fen": "3k3r/8/8/4N3/8/8/8/K7 w - - 0 1",
+        "goal": "Fork the king and rook with Nf7+.",
+        "hint": "From f7 the knight attacks d8 and h8.",
+        "solutions": [
+          [
+            "e5f7"
+          ]
+        ]
+      },
+      {
+        "fen": "1k3q2/8/1N6/8/8/8/8/K7 w - - 0 1",
+        "goal": "Fork the king and queen with Nd7+.",
+        "hint": "From d7 the knight attacks b8 and f8.",
+        "solutions": [
+          [
+            "b6d7"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-10",
+    "module": "Tactical patterns",
+    "title": "Pins",
+    "body": "A pinned piece cannot move without exposing something more valuable behind it. An absolute pin protects a king, making some moves illegal. A relative pin protects material. Attack a pinned piece with another piece when possible.",
+    "exercises": [
+      {
+        "fen": "5k2/4n3/8/8/1B6/8/8/K7 w - - 0 1",
+        "goal": "Pin the knight with Bd6.",
+        "hint": "The diagonal is d6\u2013e7\u2013f8.",
+        "solutions": [
+          [
+            "b4d6"
+          ]
+        ]
+      },
+      {
+        "fen": "4k3/4n3/8/8/8/8/8/K3R3 w - - 0 1",
+        "goal": "Capture the knight pinned to its king.",
+        "hint": "The rook looks straight up the e-file.",
+        "solutions": [
+          [
+            "e1e7"
+          ]
+        ]
+      },
+      {
+        "fen": "4k3/4n3/8/8/8/8/8/K3R3 b - - 0 1",
+        "goal": "Can Black move the knight away from the e-file?",
+        "hint": "That would expose the king to the rook.",
+        "options": [
+          "No: it is absolutely pinned",
+          "Yes: knights can jump pins",
+          "Only with check"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-11",
+    "module": "Tactical patterns",
+    "title": "Skewers",
+    "body": "A skewer attacks a valuable piece with a less valuable target behind it. When the front piece moves, the rear piece becomes available. A checking skewer is forcing because the king must respond.",
+    "exercises": [
+      {
+        "fen": "3q4/3k4/8/8/8/8/8/K1R5 w - - 0 1",
+        "goal": "Check on d1, lining up the king and queen.",
+        "hint": "Put the rook on the d-file.",
+        "solutions": [
+          [
+            "c1d1"
+          ]
+        ]
+      },
+      {
+        "fen": "4r3/4k3/8/8/8/8/8/K6R w - - 0 1",
+        "goal": "Check on e1 to skewer the rook.",
+        "hint": "The king stands in front of its rook.",
+        "solutions": [
+          [
+            "h1e1"
+          ]
+        ]
+      },
+      {
+        "fen": "3q4/3k4/8/8/8/8/8/K2R4 b - - 0 1",
+        "goal": "What is the rook doing?",
+        "hint": "The king must leave the file before the queen can be captured.",
+        "options": [
+          "Skewering king and queen",
+          "Forking two knights",
+          "Blocking check"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-12",
+    "module": "Tactical patterns",
+    "title": "Discovered attacks",
+    "body": "Moving a blocking piece can reveal an attack from a bishop, rook, or queen. If the moving piece also checks, the result can be double check. A double check must be answered with a king move.",
+    "exercises": [
+      {
+        "fen": "4k3/8/8/8/4B3/8/8/K3R3 w - - 0 1",
+        "goal": "Move the bishop to b7 to uncover rook check.",
+        "hint": "Clear the e-file.",
+        "solutions": [
+          [
+            "e4b7"
+          ]
+        ]
+      },
+      {
+        "fen": "4k3/8/8/8/4B3/8/8/K3R3 w - - 0 1",
+        "goal": "Create double check with Bc6+.",
+        "hint": "The bishop on c6 and rook on e1 both attack e8.",
+        "solutions": [
+          [
+            "e4c6"
+          ]
+        ]
+      },
+      {
+        "fen": "4k3/8/2B5/8/8/8/8/K3R3 b - - 0 1",
+        "goal": "How must Black answer this double check?",
+        "hint": "Capturing or blocking one attacker leaves the other.",
+        "options": [
+          "Move the king",
+          "Block only the rook",
+          "Block only the bishop"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-13",
+    "module": "Calculation and defense",
+    "title": "Checks, captures, threats",
+    "body": "Start calculation with forcing moves: checks, captures, and direct threats. This is a search order, not a rule that every check is good. Verify the opponent\u2019s strongest reply before committing.",
+    "exercises": [
+      {
+        "fen": "7k/8/5KQ1/8/8/8/8/8 w - - 0 1",
+        "goal": "Find the forcing checkmate.",
+        "hint": "Check on g7.",
+        "solutions": [
+          [
+            "g6g7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/3q4/8/8/8/8/8/K2R4 w - - 0 1",
+        "goal": "Find the free queen capture.",
+        "hint": "The d-file is open.",
+        "solutions": [
+          [
+            "d1d7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/7q/8/8/8/8/K1B5 w - - 0 1",
+        "goal": "Find the free queen capture.",
+        "hint": "Look along the bishop\u2019s diagonal.",
+        "solutions": [
+          [
+            "c1h6"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-14",
+    "module": "Calculation and defense",
+    "title": "Forcing lines",
+    "body": "Calculate a line by alternating your move and the opponent\u2019s reply. A forcing sequence limits the opponent\u2019s choices. Practice following the whole line instead of stopping after the first attractive move.",
+    "exercises": [
+      {
+        "prefix": [
+          "e2e4",
+          "e7e5",
+          "g1f3",
+          "b8c6",
+          "f1b5",
+          "a7a6"
+        ],
+        "goal": "Follow this exchange: Bxc6, ...dxc6, Nxe5.",
+        "hint": "First exchange on c6, then take the central pawn.",
+        "solutions": [
+          [
+            "b5c6",
+            "d7c6",
+            "f3e5"
+          ]
+        ]
+      },
+      {
+        "prefix": [
+          "e2e4",
+          "d7d5"
+        ],
+        "goal": "Exchange central pawns, then develop with tempo after ...Qxd5.",
+        "hint": "Play exd5, then Nc3 after the queen recaptures.",
+        "solutions": [
+          [
+            "e4d5",
+            "d8d5",
+            "b1c3"
+          ]
+        ]
+      },
+      {
+        "prefix": [
+          "e2e4",
+          "e7e5",
+          "g1f3",
+          "b8c6",
+          "d2d4"
+        ],
+        "goal": "Follow the exchange on d4 and recapture with the knight.",
+        "hint": "Black to move: ...exd4, Nxd4.",
+        "solutions": [
+          [
+            "e5d4",
+            "f3d4"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-15",
+    "module": "Calculation and defense",
+    "title": "Removing defenders",
+    "body": "A defender may be the only thing keeping a target safe. Capture, deflect, or exchange that defender before taking the target. Check whether the recapture changes the geometry of the position.",
+    "exercises": [
+      {
+        "fen": "7k/8/7q/5n2/8/8/8/K1B2R2 w - - 0 1",
+        "goal": "Remove the knight that defends the queen on h6.",
+        "hint": "The knight on f5 protects h6. Capture it with the rook.",
+        "solutions": [
+          [
+            "f1f5"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/7q/5n2/8/8/K1B4R w - - 0 1",
+        "goal": "Remove the knight that defends the queen on h5.",
+        "hint": "The knight on f4 protects h5. Capture it with the bishop.",
+        "solutions": [
+          [
+            "c1f4"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/7q/5n2/8/8/8/K1B2R2 w - - 0 1",
+        "goal": "Which piece protects the black queen on h6?",
+        "hint": "A knight on f5 attacks h6.",
+        "options": [
+          "The knight on f5",
+          "The black king",
+          "Nothing"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-16",
+    "module": "Calculation and defense",
+    "title": "Defending threats",
+    "body": "Before attacking, ask what the opponent threatens. You can capture an attacker, move the target, add a defender, or create a stronger forcing threat. When in check, only moves resolving check are legal.",
+    "exercises": [
+      {
+        "fen": "k3r3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "goal": "Defend against check with Kf1.",
+        "hint": "Leave the attacked file.",
+        "solutions": [
+          [
+            "e1f1"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/3r4/8/8/8/8/8/K2Q4 w - - 0 1",
+        "goal": "Remove the attacking rook.",
+        "hint": "Capture along the open d-file.",
+        "solutions": [
+          [
+            "d1d7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/8/3n4/8/8/K2R4 w - - 0 1",
+        "goal": "Remove the enemy knight on d4.",
+        "hint": "The knight is undefended on the rook\u2019s file.",
+        "solutions": [
+          [
+            "d1d4"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-17",
+    "module": "Opening and positional play",
+    "title": "Development and king safety",
+    "body": "Develop knights and bishops toward useful squares, control central squares, and castle when safe. Avoid repeated queen moves without a reason. These are principles: tactical threats take priority.",
+    "exercises": [
+      {
+        "prefix": [
+          "e2e4",
+          "e7e5"
+        ],
+        "goal": "Develop a knight toward the center.",
+        "hint": "Nf3 attacks e5; Nc3 also develops.",
+        "solutions": [
+          [
+            "g1f3"
+          ],
+          [
+            "b1c3"
+          ]
+        ]
+      },
+      {
+        "prefix": [
+          "e2e4",
+          "e7e5",
+          "g1f3",
+          "b8c6"
+        ],
+        "goal": "Develop the bishop to an active square.",
+        "hint": "Choose Bc4 or Bb5.",
+        "solutions": [
+          [
+            "f1c4"
+          ],
+          [
+            "f1b5"
+          ]
+        ]
+      },
+      {
+        "prefix": [
+          "e2e4",
+          "e7e5",
+          "g1f3",
+          "b8c6",
+          "f1c4",
+          "f8c5"
+        ],
+        "goal": "Castle to protect the king.",
+        "hint": "The f1 and g1 squares are clear.",
+        "solutions": [
+          [
+            "e1g1"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-18",
+    "module": "Opening and positional play",
+    "title": "Central control",
+    "body": "Central pawns claim space and support pieces. Knights near the center reach more squares than knights on the edge. Challenge an opposing center with pawn breaks when your pieces can support them.",
+    "exercises": [
+      {
+        "prefix": [],
+        "goal": "Claim the center with a pawn.",
+        "hint": "Play e4 or d4.",
+        "solutions": [
+          [
+            "e2e4"
+          ],
+          [
+            "d2d4"
+          ]
+        ]
+      },
+      {
+        "prefix": [
+          "d2d4",
+          "d7d5"
+        ],
+        "goal": "Challenge the d5 pawn with the c-pawn.",
+        "hint": "The Queen\u2019s Gambit begins with c4.",
+        "solutions": [
+          [
+            "c2c4"
+          ]
+        ]
+      },
+      {
+        "prefix": [
+          "e2e4",
+          "e7e5",
+          "g1f3",
+          "b8c6"
+        ],
+        "goal": "Challenge the center with d4.",
+        "hint": "Prepare for a possible exchange on d4.",
+        "solutions": [
+          [
+            "d2d4"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-19",
+    "module": "Opening and positional play",
+    "title": "Pawn structure",
+    "body": "Pawn moves are permanent. Connected pawns can support each other; isolated pawns need piece support. Doubled pawns share a file and cannot protect each other directly. A passed pawn has no enemy pawn ahead on its own or neighboring files.",
+    "exercises": [
+      {
+        "fen": "7k/8/8/8/2P5/2P5/8/K7 w - - 0 1",
+        "goal": "What describes White\u2019s pawns?",
+        "hint": "Both pawns occupy the c-file.",
+        "options": [
+          "Doubled pawns",
+          "Connected pawns",
+          "A pawn chain"
+        ],
+        "correct": 0
+      },
+      {
+        "fen": "7k/8/8/8/3P4/4P3/8/K7 w - - 0 1",
+        "goal": "What protects the pawn on d4?",
+        "hint": "White pawns capture diagonally upward.",
+        "options": [
+          "The e3 pawn",
+          "The king",
+          "Nothing"
+        ],
+        "correct": 0
+      },
+      {
+        "fen": "7k/p7/8/4P3/8/8/8/K7 w - - 0 1",
+        "goal": "Is the e5 pawn passed?",
+        "hint": "Check the d-, e-, and f-files ahead of it.",
+        "options": [
+          "Yes",
+          "No: a7 stops it",
+          "Only after e6"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-20",
+    "module": "Opening and positional play",
+    "title": "Activity and exchanges",
+    "body": "Active pieces influence useful squares. Rooks like open files; knights like stable central outposts. Exchanges can remove active enemy pieces, relieve pressure, or lead to favorable endgames. Count material and inspect the resulting position.",
+    "exercises": [
+      {
+        "fen": "7k/8/8/8/8/8/R7/K7 w - - 0 1",
+        "goal": "Activate the rook on the seventh rank.",
+        "hint": "Move to a7.",
+        "solutions": [
+          [
+            "a2a7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/8/8/1N6/8/K7 w - - 0 1",
+        "goal": "Centralize the knight on d4.",
+        "hint": "A knight on d4 influences eight squares.",
+        "solutions": [
+          [
+            "b3d4"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/8/8/8/5b2/8/8/K1B5 w - - 0 1",
+        "goal": "Exchange the active enemy bishop.",
+        "hint": "Capture on f4.",
+        "solutions": [
+          [
+            "c1f4"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lesson-21",
+    "module": "Endgames",
+    "title": "King and queen mate",
+    "body": "Use your queen to restrict the enemy king and your king to support the final mate. Reduce the available rectangle without stalemating. When the kings are close enough, a protected queen beside the enemy king can finish the game.",
+    "exercises": [
+      {
+        "fen": "7k/8/5KQ1/8/8/8/8/8 w - - 0 1",
+        "goal": "Mate in one.",
+        "hint": "Qg7 is protected by the king.",
+        "solutions": [
+          [
+            "g6g7"
+          ]
+        ]
+      },
+      {
+        "fen": "k7/8/1QK5/8/8/8/8/8 w - - 0 1",
+        "goal": "Mate in one.",
+        "hint": "Qb7 is protected by the king.",
+        "solutions": [
+          [
+            "b6b7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/5K2/6Q1/8/8/8/8/8 b - - 0 1",
+        "goal": "Why is this not a win by checkmate?",
+        "hint": "Black is not in check and has no move.",
+        "options": [
+          "It is stalemate",
+          "The queen is pinned",
+          "Black can capture the king"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-22",
+    "module": "Endgames",
+    "title": "King and rook mate",
+    "body": "A rook cuts off ranks or files while the king approaches. Drive the enemy king to an edge, then use your king to cover escapes and your rook to give the final check. Avoid leaving the rook where it can be captured.",
+    "exercises": [
+      {
+        "fen": "7k/R7/6K1/8/8/8/8/8 w - - 0 1",
+        "goal": "Deliver rook mate on a8.",
+        "hint": "The king covers h7 and g7; the rook covers rank eight.",
+        "solutions": [
+          [
+            "a7a8"
+          ]
+        ]
+      },
+      {
+        "fen": "k7/7R/1K6/8/8/8/8/8 w - - 0 1",
+        "goal": "Deliver rook mate on h8.",
+        "hint": "The king covers a7 and b7; the rook covers rank eight.",
+        "solutions": [
+          [
+            "h7h8"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/R7/5K2/8/8/8/8/8 w - - 0 1",
+        "goal": "Which piece should restrict the king along a full rank?",
+        "hint": "One piece can attack every square on a rank.",
+        "options": [
+          "The rook",
+          "The king",
+          "Neither"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-23",
+    "module": "Endgames",
+    "title": "Opposition and key squares",
+    "body": "Kings in opposition face one another with one square between them. The side to move often has to give way. In pawn endings, reaching key squares with your king can matter more than pushing the pawn immediately.",
+    "exercises": [
+      {
+        "fen": "8/8/4k3/8/4K3/4P3/8/8 w - - 0 1",
+        "goal": "White to move: who has direct opposition?",
+        "hint": "The side that does not have to move holds it.",
+        "options": [
+          "Black",
+          "White",
+          "Neither"
+        ],
+        "correct": 0
+      },
+      {
+        "fen": "8/4k3/8/8/4K3/4P3/8/8 w - - 0 1",
+        "goal": "Take the opposition with Ke5.",
+        "hint": "Put one square between the kings.",
+        "solutions": [
+          [
+            "e4e5"
+          ]
+        ]
+      },
+      {
+        "fen": "8/4k3/8/4K3/4P3/8/8/8 w - - 0 1",
+        "goal": "Why keep the king ahead of its pawn?",
+        "hint": "The king can protect the pawn\u2019s path and claim key squares.",
+        "options": [
+          "To control promotion routes",
+          "To block the pawn forever",
+          "Kings cannot move behind pawns"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "lesson-24",
+    "module": "Endgames",
+    "title": "Pawn races",
+    "body": "Count moves to promotion and remember whose turn it is. A pawn can advance two squares only from its starting rank if both squares are clear. Promotion with check can decide a race by forcing the opponent to answer.",
+    "exercises": [
+      {
+        "fen": "8/7k/P7/8/8/7p/8/K7 w - - 0 1",
+        "goal": "Start White\u2019s promotion race with a7.",
+        "hint": "Your pawn is two moves from promotion.",
+        "solutions": [
+          [
+            "a6a7"
+          ]
+        ]
+      },
+      {
+        "fen": "7k/P7/8/8/8/8/7p/K7 w - - 0 1",
+        "goal": "Promote with check.",
+        "hint": "A queen on a8 checks the king on h8.",
+        "solutions": [
+          [
+            "a7a8q"
+          ]
+        ]
+      },
+      {
+        "fen": "8/7k/P7/8/8/7p/8/K7 w - - 0 1",
+        "goal": "How many pawn moves does White need to promote?",
+        "hint": "a6\u2013a7\u2013a8.",
+        "options": [
+          "Two",
+          "One",
+          "Three"
+        ],
+        "correct": 0
+      }
+    ]
+  }
+]

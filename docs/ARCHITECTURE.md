@@ -4,10 +4,10 @@
 - `lib/core/chess` – dartchess-based model: `ChessGame` (move tree, PGN import/export), `positionKey` (FEN minus counters, en-passant only when capturable) used for repetition and repertoire transpositions.
 - `lib/core/engine` – `EngineClient`: one serialized Stockfish via the C ABI in `native/adapter.cpp` (create/start/send/poll/stop/dispose) over Dart FFI. Searches are serialized; a stopped search is drained before the next starts; stale results are rejected by epoch tokens in cubits.
 - `lib/core/storage` – Drift schema (`schema.drift`, schema version 1), `Repository`, `BackupService`.
-- `lib/features/*` – play, analysis (position editor), puzzles (training, packs), statistics, settings.
+- `lib/features/*` – play, analysis (position editor), puzzles (training, packs), learn (guided lessons and coordinates), statistics, settings.
 
 ## Schema (v1)
-games, nodes (move tree, comments, NAGs, shapes, clocks), analysis (per-node review JSON, tagged cp/mate), repertoires, cards (canonical key position, accepted moves, stage, due UTC ms), puzzles, packs, attempts (puzzle/opening, hints, duration, metadata snapshot), preferences. Foreign keys are ON; deleting a game cascades to nodes/analysis/repertoires/cards.
+games, nodes (move tree, comments, NAGs, shapes, clocks), analysis (per-node review JSON, tagged cp/mate), repertoires, cards (canonical key position, accepted moves, stage, due UTC ms), puzzles, packs, attempts (puzzle/opening/lesson/coordinate, hints, duration, metadata snapshot), preferences. Foreign keys are ON; deleting a game cascades to nodes/analysis/repertoires/cards.
 
 ## Engine protocol
 `uci`/`uciok` → options → `isready`/`readyok` → `position fen … moves …` → `go movetime` → streamed `info` (depth, multipv, cp/mate, bounds, pv) → `bestmove`. Cancel sends `stop` and drains `bestmove`. Review runs an unrestricted search and a `searchmoves` search with equal budget; thresholds 0.5/1/2 pawns; mate-specific labels.
@@ -30,3 +30,8 @@ Performance monitoring lives in `lib/core/diagnostics/perf.dart` (`Perf.trace`, 
 - `lib/core/cloud/account.dart` (Firebase Auth: Google, Apple), `cloud_backup.dart` (uploads the validated backup archive to Firestore `users/{uid}/backups/{id}` as ≤700 KB chunks with a checksummed metadata document written last; retention 5, Wi-Fi only, no offline write queue, change tracking via `Repository.changes`), `remote_config.dart` (typed, clamped values with offline defaults).
 - `lib/core/notifications/notifications.dart` (local reminders with timezone-aware scheduling, FCM topic) and `lib/core/diagnostics/analytics.dart`.
 - Every online capability is optional, switchable in Settings and guarded so failures never surface as unhandled errors; the app starts and plays fully offline.
+
+## Learning and insights
+The original offline course lives in `assets/lessons.json`: six modules, 24 lessons, and 72 exercises. Exercises use legal authored move lines (including scripted opponent replies) or board-based recognition questions. Lesson progress uses `lessons.progress.v1`; exercise attempts use kind `lesson`. Coordinate sessions use kind `coordinate`; settings and timed best scores use `coordinates.*` preferences. These records use the existing schema and backup format.
+
+Insights group completed engine games by color, named opening, and difficulty, respecting assisted/custom-position filters. Reviews count human mainline moves only and use the latest stored label per node, without counting repeated review budgets twice. Missing review data stays missing. Training theme rankings require five attempts.

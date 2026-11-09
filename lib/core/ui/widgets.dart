@@ -74,7 +74,7 @@ class HeroCard extends StatelessWidget {
             child: Battlements(color: t.onHero.withValues(alpha: .10)),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -99,7 +99,7 @@ class HeroCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 action,
               ],
             ),
@@ -139,7 +139,7 @@ class SectionLabel extends StatelessWidget {
   final Widget? trailing;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 24, 4, 8),
+    padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
     child: Row(
       children: [
         Expanded(
@@ -216,6 +216,40 @@ class ActionTile extends StatelessWidget {
   }
 }
 
+/// Consistent separation for stacked primary and secondary actions.
+class ActionStack extends StatelessWidget {
+  const ActionStack({super.key, required this.children});
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Column(
+    spacing: 12,
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: children,
+  );
+}
+
+/// Dialog actions retain a gap both side by side and when they overflow vertically.
+class ActionDialog extends StatelessWidget {
+  const ActionDialog({
+    super.key,
+    this.title,
+    this.content,
+    this.actions = const [],
+  });
+  final Widget? title, content;
+  final List<Widget> actions;
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: title,
+    content: content,
+    actionsPadding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+    buttonPadding: const EdgeInsets.all(6),
+    actionsOverflowButtonSpacing: 8,
+    actions: actions,
+  );
+}
+
 /// Result/status chip — always icon + text, never color alone.
 class StatusChip extends StatelessWidget {
   const StatusChip(this.label, {super.key, required this.icon, this.color});
@@ -236,11 +270,13 @@ class StatusChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: c),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: context.text.labelMedium?.copyWith(
-              color: c,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              style: context.text.labelMedium?.copyWith(
+                color: c,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -324,6 +360,20 @@ class FeedbackCard extends StatelessWidget {
   }
 }
 
+/// Equal-height tool buttons with a real gap between their hit areas.
+class ToolRow extends StatelessWidget {
+  const ToolRow({super.key, required this.children});
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => IntrinsicHeight(
+    child: Row(
+      spacing: 12,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [for (final child in children) Expanded(child: child)],
+    ),
+  );
+}
+
 /// Icon-over-label toolbar button.
 class ToolButton extends StatelessWidget {
   const ToolButton({
@@ -348,12 +398,12 @@ class ToolButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(Corner.sm),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, color: fg),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 label,
                 maxLines: 2,
@@ -496,7 +546,9 @@ class MoveChip extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
             onTap: onTap,
-            child: Padding(
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+              alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: Text.rich(
                 TextSpan(

@@ -173,7 +173,7 @@ class _SettingsState extends State<SettingsScreen> {
   Future<void> _deleteAccount() async {
     final yes = await showDialog<bool>(
       context: context,
-      builder: (c) => AlertDialog(
+      builder: (c) => ActionDialog(
         title: const Text('Delete account?'),
         content: const Text(
           'This deletes your sign-in and every cloud backup. Data on this device is kept.',
@@ -264,7 +264,7 @@ class _SettingsState extends State<SettingsScreen> {
                 Analytics.log('plus_unlock_tapped');
                 showDialog<void>(
                   context: context,
-                  builder: (d) => AlertDialog(
+                  builder: (d) => ActionDialog(
                     title: const Text('Castlei Plus'),
                     content: const Text(
                       'Purchases will open once Castlei is released in the app store.',
@@ -318,7 +318,7 @@ class _SettingsState extends State<SettingsScreen> {
                 label: const Text('Continue with Google'),
               ),
               if (account.appleSupported) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: busy
                       ? null

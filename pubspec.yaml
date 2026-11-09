@@ -101,6 +101,7 @@ flutter:
     - assets/pieces/
     - assets/puzzles/
     - assets/sounds/
+    - assets/lessons.json
     - assets/openings.json
   fonts:
     - family: Fraunces

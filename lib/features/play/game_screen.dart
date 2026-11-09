@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+import 'package:dartchess/dartchess.dart';
+
+import '../../core/ui/board_workspace.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../core/chess/openings.dart';
@@ -47,6 +51,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _soundNode;
   String _soundResult = '*';
   bool _soundSeeded = false;
+  final Set<String> _lowTimeWarned = {};
   @override
   void initState() {
     super.initState();
@@ -123,7 +128,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final controller = TextEditingController(text: n.comment);
     final text = await showDialog<String>(
       context: context,
-      builder: (c) => AlertDialog(
+      builder: (c) => ActionDialog(
         title: const Text('Position notes'),
         content: TextField(controller: controller, maxLines: 5),
         actions: [
@@ -149,7 +154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final g = widget.game;
     final yes = await showDialog<bool>(
       context: context,
-      builder: (c) => AlertDialog(
+      builder: (c) => ActionDialog(
         title: const Text('Resign this game?'),
         content: const Text('It will be saved as a loss.'),
         actions: [
@@ -196,6 +201,97 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
+  Widget _player(ChessGame g, GameView state, Side side) {
+    final white = side == Side.white;
+    final human = side == cubit.human;
+    final ms = white ? cubit.white : cubit.black;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Text(white ? '♔' : '♚', style: const TextStyle(fontSize: 24)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${widget.study
+                  ? ''
+                  : human
+                  ? 'You · '
+                  : 'Stockfish · '}${white ? 'White' : 'Black'}',
+              style: context.text.titleSmall,
+            ),
+          ),
+          if (cubit.timed && !widget.study)
+            _Clock(
+              label: white ? 'White' : 'Black',
+              value: clock(ms),
+              low: ms < 20000,
+              active:
+                  !state.paused && g.result == '*' && g.position.turn == side,
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _variation(Position position, List<String> moves) {
+    final words = <String>[];
+    for (final uci in moves.take(8)) {
+      final move = Move.parse(uci);
+      if (move == null || !position.isLegal(move)) break;
+      final next = position.makeSan(move);
+      words.add(next.$2);
+      position = next.$1;
+    }
+    return words.join(' ');
+  }
+
+  Future<void> _exploreLine(List<String> moves) async {
+    var position = widget.game.position;
+    final legal = <Move>[];
+    for (final uci in moves) {
+      final move = Move.parse(uci);
+      if (move == null || !position.isLegal(move)) return;
+      legal.add(move);
+      position = position.play(move);
+    }
+    await cubit.pause();
+    String? first;
+    for (final move in legal) {
+      final node = widget.game.play(move);
+      first ??= node.id;
+    }
+    await cubit.persist();
+    await cubit.navigate(first ?? widget.game.current);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _rematch() async {
+    final old = widget.game;
+    final settings = Map<String, dynamic>.from(old.settings)
+      ..remove('reason')
+      ..remove('completedAt')
+      ..remove('whiteMs')
+      ..remove('blackMs');
+    final game = ChessGame(
+      id: newId(),
+      title: old.title,
+      source: 'engine',
+      rootFen: old.rootFen,
+      created: DateTime.now().millisecondsSinceEpoch,
+      settings: settings,
+    );
+    await widget.repo.save(game);
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            GameScreen(game: game, repo: widget.repo, engine: widget.engine),
+      ),
+    );
+  }
+
   String clock(int ms) =>
       '${ms ~/ 60000}:${((ms ~/ 1000) % 60).toString().padLeft(2, '0')}';
   @override
@@ -206,6 +302,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final current = g.nodes.where((n) => n.id == g.current).firstOrNull;
       final path = g.path(g.current);
       _announceMove(g, current);
+      if (!widget.study && !state.paused && g.result == '*' && cubit.timed) {
+        for (final pair in [('white', cubit.white), ('black', cubit.black)]) {
+          if (pair.$2 > 0 && pair.$2 < 20000 && _lowTimeWarned.add(pair.$1)) {
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => Sfx.play(MoveSound.check, sound: sound, haptics: haptics),
+            );
+          }
+        }
+      }
       if (_reviewKey != state.reviewDone || _reviewRows == null) {
         _reviewKey = state.reviewDone;
         _reviewRows = widget.repo.db.rows(
@@ -224,7 +329,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       }
       return Scaffold(
         appBar: AppBar(
-          title: Text(g.title),
+          title: Text(g.title, maxLines: 1, overflow: TextOverflow.ellipsis),
           actions: [
             IconButton(
               tooltip: 'Copy PGN',
@@ -232,6 +337,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   Clipboard.setData(ClipboardData(text: g.exportPgn())),
               icon: const Icon(Icons.ios_share),
             ),
+            const SizedBox(width: 8),
             IconButton(
               tooltip: 'Flip board',
               onPressed: () => setState(() => flipped = !flipped),
@@ -240,10 +346,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ],
         ),
         body: SafeArea(
-          child: ListView(
+          child: BoardWorkspace(
             padding: const EdgeInsets.all(16),
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   StatusChip(
                     widget.study
@@ -252,30 +360,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     icon: widget.study
                         ? Icons.analytics_outlined
                         : Icons.memory,
-                    color: context.colors.primary,
                   ),
-                  const Spacer(),
-                  if (cubit.timed) ...[
-                    _Clock(
-                      label: 'Black',
-                      value: clock(cubit.black),
-                      active:
-                          !state.paused &&
-                          g.result == '*' &&
-                          g.position.turn.name == 'black',
+                  if (widget.study)
+                    StatusChip(
+                      state.thinking ? 'Analyzing…' : 'Analysis stopped',
+                      icon: Icons.analytics_outlined,
                     ),
-                    const SizedBox(width: 8),
-                    _Clock(
-                      label: 'White',
-                      value: clock(cubit.white),
-                      active:
-                          !state.paused &&
-                          g.result == '*' &&
-                          g.position.turn.name == 'white',
-                    ),
-                  ],
                 ],
               ),
+              TurnCue(position: g.position),
+              _player(g, state, flipped ? Side.white : Side.black),
               Builder(
                 builder: (_) {
                   final o = Openings.forLine(g, g.current);
@@ -304,6 +398,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 coordinates: coordinates,
                 flipped: flipped,
                 enabled: cubit.canMove,
+                onIllegalMove: () {
+                  if (haptics) HapticFeedback.lightImpact();
+                },
                 drawing: drawing,
                 shapes: [
                   ...?current?.shapes,
@@ -321,7 +418,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ? state.lines.firstOrNull?.pv.firstOrNull
                     : null,
               ),
-              const SizedBox(height: 14),
+              _player(g, state, flipped ? Side.black : Side.white),
+              const SizedBox(height: 8),
               if (widget.study && state.lines.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -404,8 +502,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     ? 'Stockfish is thinking…'
                                     : state.paused
                                     ? 'Game paused — your progress is saved'
-                                    : 'Your move')
-                              : '${g.result} · ${g.settings['reason'] ?? 'Finished'}',
+                                    : '${cubit.human == Side.white ? 'White' : 'Black'} · Your move')
+                              : '${g.result == '1/2-1/2'
+                                    ? 'Draw'
+                                    : g.result == (cubit.human == Side.white ? '1-0' : '0-1')
+                                    ? 'You won'
+                                    : 'You lost'} · ${g.settings['reason'] ?? 'Finished'}',
                           style: context.text.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -415,8 +517,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                ActionStack(
                   children: [
                     if (g.result == '*')
                       FilledButton.icon(
@@ -426,42 +527,32 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         ),
                         label: Text(state.paused ? 'Resume' : 'Pause'),
                       ),
-                    if (g.result == '*') ...[
-                      const SizedBox(height: 10),
-                      Row(
+                    if (g.result == '*')
+                      ToolRow(
                         children: [
-                          Expanded(
-                            child: ToolButton(
-                              icon: Icons.undo_rounded,
-                              label: 'Take back',
-                              onTap: g.current == null ? null : cubit.undo,
-                            ),
+                          ToolButton(
+                            icon: Icons.undo_rounded,
+                            label: 'Take back',
+                            onTap: g.current == null ? null : cubit.undo,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ToolButton(
-                              icon: Icons.lightbulb_outline_rounded,
-                              label: 'Hint',
-                              onTap: () async {
-                                setState(
-                                  () => hintLevel = (hintLevel + 1).clamp(1, 2),
-                                );
-                                await cubit.hint();
-                              },
-                            ),
+                          ToolButton(
+                            icon: Icons.lightbulb_outline_rounded,
+                            label: 'Hint',
+                            onTap: () async {
+                              setState(
+                                () => hintLevel = (hintLevel + 1).clamp(1, 2),
+                              );
+                              await cubit.hint();
+                            },
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ToolButton(
-                              icon: Icons.flag_outlined,
-                              label: 'Resign',
-                              danger: true,
-                              onTap: _resign,
-                            ),
+                          ToolButton(
+                            icon: Icons.flag_outlined,
+                            label: 'Resign',
+                            danger: true,
+                            onTap: _resign,
                           ),
                         ],
                       ),
-                    ],
                     if (!cubit.canClaim && cubit.intendedClaims.isNotEmpty)
                       TextButton(
                         onPressed: () async {
@@ -510,10 +601,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ),
                     child: const Text('Review game'),
                   ),
+                if (g.result != '*') const SizedBox(height: 12),
+                if (g.result != '*')
+                  TextButton.icon(
+                    onPressed: _rematch,
+                    icon: const Icon(Icons.replay),
+                    label: const Text('Play again'),
+                  ),
               ],
               if (widget.study) ...[
                 Wrap(
-                  spacing: 8,
+                  spacing: 12,
+                  runSpacing: 12,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     DropdownButton<int>(
@@ -551,59 +650,70 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
+                const Text('Evaluation from White’s perspective'),
                 for (final l in state.lines)
                   Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        '${l.label(g.position.turn.name == 'white')}  ·  depth ${l.depth}\n${l.pv.take(8).join(' ')}',
+                    child: ListTile(
+                      title: Text(
+                        '${l.label(g.position.turn == Side.white)} · depth ${l.depth}',
                       ),
+                      subtitle: Text(_variation(g.position, l.pv)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _exploreLine(l.pv),
                     ),
                   ),
-                Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Beginning',
-                      onPressed: () => cubit.navigate(null),
-                      icon: const Icon(Icons.first_page),
-                    ),
-                    IconButton(
-                      tooltip: 'Previous move',
-                      onPressed: () => cubit.navigate(current?.parent),
-                      icon: const Icon(Icons.chevron_left),
-                    ),
-                    IconButton(
-                      tooltip: 'Next move',
-                      onPressed: g.children(g.current).isEmpty
-                          ? null
-                          : () =>
-                                cubit.navigate(g.children(g.current).first.id),
-                      icon: const Icon(Icons.chevron_right),
-                    ),
-                    IconButton(
-                      tooltip: 'Draw annotations',
-                      isSelected: drawing,
-                      onPressed: () => setState(() => drawing = !drawing),
-                      icon: const Icon(Icons.draw_outlined),
-                    ),
-                    IconButton(
-                      tooltip: 'Comment',
-                      onPressed: comment,
-                      icon: const Icon(Icons.comment_outlined),
-                    ),
-                    IconButton(
-                      tooltip: 'Clear annotations',
-                      onPressed: () async {
-                        current?.shapes.clear();
-                        await cubit.persist();
-                        setState(() {});
-                      },
-                      icon: const Icon(Icons.layers_clear),
-                    ),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      IconButton.filledTonal(
+                        tooltip: 'Beginning',
+                        onPressed: () => cubit.navigate(null),
+                        icon: const Icon(Icons.first_page),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: 'Previous move',
+                        onPressed: () => cubit.navigate(current?.parent),
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: 'Next move',
+                        onPressed: g.children(g.current).isEmpty
+                            ? null
+                            : () => cubit.navigate(
+                                g.children(g.current).first.id,
+                              ),
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: 'Draw annotations',
+                        isSelected: drawing,
+                        onPressed: () => setState(() => drawing = !drawing),
+                        icon: const Icon(Icons.draw_outlined),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: 'Comment',
+                        onPressed: comment,
+                        icon: const Icon(Icons.comment_outlined),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: 'Clear annotations',
+                        onPressed: () async {
+                          current?.shapes.clear();
+                          await cubit.persist();
+                          setState(() {});
+                        },
+                        icon: const Icon(Icons.layers_clear),
+                      ),
+                    ],
+                  ),
                 ),
                 if (drawing)
                   Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       for (final c in ['G', 'R', 'B', 'Y'])
                         ChoiceChip(
@@ -623,7 +733,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 if (current != null)
                   Wrap(
-                    spacing: 4,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       for (final nag in [
                         (1, '!'),
@@ -655,8 +766,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               const Divider(),
               Text('MOVES', style: Theme.of(context).textTheme.labelLarge),
               Wrap(
-                spacing: 0,
-                runSpacing: 2,
+                spacing: 4,
+                runSpacing: 8,
                 children: [
                   for (
                     var i = 0;
@@ -691,7 +802,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             onPressed: () async {
                               final yes = await showDialog<bool>(
                                 context: context,
-                                builder: (c) => AlertDialog(
+                                builder: (c) => ActionDialog(
                                   title: const Text('Delete this variation?'),
                                   actions: [
                                     TextButton(
@@ -729,6 +840,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         : const Icon(Icons.call_split),
                     onTap: () => cubit.navigate(n.id),
                   ),
+                const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: state.thinking ? null : () => cubit.review(budget),
                   icon: const Icon(Icons.analytics_outlined),
@@ -777,27 +889,34 @@ class _Clock extends StatelessWidget {
     required this.label,
     required this.value,
     required this.active,
+    this.low = false,
   });
   final String label, value;
-  final bool active;
+  final bool active, low;
   @override
   Widget build(BuildContext context) => Semantics(
     label: '$label clock $value${active ? ', running' : ''}',
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: active
+        color: low
+            ? context.colors.errorContainer
+            : active
             ? context.colors.primary
             : context.colors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ExcludeSemantics(
         child: Text(
-          value,
+          '$value${low ? ' !' : ''}',
           style: context.text.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
             fontFeatures: const [FontFeature.tabularFigures()],
-            color: active ? context.colors.onPrimary : context.colors.onSurface,
+            color: low
+                ? context.colors.onErrorContainer
+                : active
+                ? context.colors.onPrimary
+                : context.colors.onSurface,
           ),
         ),
       ),

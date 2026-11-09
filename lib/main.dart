@@ -37,6 +37,8 @@ import 'features/puzzles/training_screen.dart';
 import 'features/puzzles/training.dart';
 import 'features/puzzles/packs.dart';
 import 'features/statistics/statistics.dart';
+import 'features/learn/lesson_screen.dart';
+import 'features/learn/coordinates.dart';
 
 /// Tests re-run main() in one process; never leave two connections on the file.
 AppDatabase? _openDatabase;
@@ -44,7 +46,7 @@ AppDatabase? _openDatabase;
 Future<void> main() async {
   final startup = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await SystemChrome.setPreferredOrientations([]);
   final dir = await getApplicationSupportDirectory();
   await _openDatabase?.close();
   _openDatabase = AppDatabase(io.File('${dir.path}/castlei.sqlite'));
@@ -130,6 +132,12 @@ class _AppState extends State<CastleiApp> {
     themeMode: mode,
     theme: buildTheme(Brightness.light),
     darkTheme: buildTheme(Brightness.dark),
+    // Keep every route, sheet, and scroll viewport above the system controls.
+    // SafeArea consumes these insets so route-level padding cannot add them twice.
+    builder: (context, child) => ColoredBox(
+      color: Theme.of(context).colorScheme.surface,
+      child: SafeArea(top: false, child: child ?? const SizedBox.shrink()),
+    ),
   );
 }
 
@@ -275,7 +283,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     final c = TextEditingController(text: initial);
     return showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => ActionDialog(
         title: Text(title),
         content: TextField(controller: c, maxLines: lines),
         actions: [
@@ -300,22 +308,15 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     var base = 0;
     var increment = 0;
     var fen = Chess.initial.fen;
-    var title = study ? 'New study' : 'Practice game';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, update) => AlertDialog(
+        builder: (ctx, update) => ActionDialog(
           title: Text(study ? 'Create study' : 'Play Stockfish'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  initialValue: title,
-                  decoration: const InputDecoration(labelText: 'Title'),
-                  onChanged: (s) => title = s,
-                ),
-                const SizedBox(height: 16),
                 if (!study) ...[
                   DropdownButtonFormField<int>(
                     initialValue: level,
@@ -431,7 +432,14 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
         ),
       ),
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
+    final now = DateTime.now();
+    final localizations = MaterialLocalizations.of(context);
+    final stamp =
+        '${localizations.formatMediumDate(now)} · ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(now))}';
+    final title = study
+        ? 'Study · $stamp'
+        : 'Stockfish · ${['Gentle', 'Easy', 'Medium', 'Hard', 'Maximum'][level ~/ 5]} · $stamp';
     if (side == 'random') {
       side = DateTime.now().microsecond.isEven ? 'white' : 'black';
     }
@@ -507,7 +515,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
       setState(() {});
       await showDialog(
         context: context,
-        builder: (c) => AlertDialog(
+        builder: (c) => ActionDialog(
           title: const Text('Import report'),
           content: SingleChildScrollView(
             child: Text(
@@ -553,7 +561,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     if (!mounted) return;
     final yes = await showDialog<bool>(
       context: context,
-      builder: (c) => AlertDialog(
+      builder: (c) => ActionDialog(
         title: const Text('Replace all local data?'),
         content: Text(
           'This backup contains ${(data['games'] as List).length} games. Existing data will be replaced. Back up first if you want to keep it.',
@@ -598,7 +606,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
         children: [
           const Icon(Icons.castle_outlined),
           const SizedBox(width: 10),
-          Text(['Castlei', 'Play', 'Study', 'Library'][tab]),
+          Text(['Castlei', 'Play', 'Learn', 'Library'][tab]),
         ],
       ),
       actions: [
@@ -613,7 +621,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
       selectedIndex: tab,
       onDestinationSelected: (i) {
         setState(() => tab = i);
-        Analytics.screen(['home', 'play', 'study', 'library'][i]);
+        Analytics.screen(['home', 'play', 'learn', 'library'][i]);
       },
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
@@ -623,7 +631,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
         ),
         NavigationDestination(
           icon: Icon(Icons.school_outlined),
-          label: 'Study',
+          label: 'Learn',
         ),
         NavigationDestination(
           icon: Icon(Icons.collections_bookmark_outlined),
@@ -633,7 +641,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     ),
     body: SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        padding: pagePadding(context),
         children: [
           if (tab == 0) ...[
             if (_bannerText.isNotEmpty)
@@ -657,7 +665,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                 return unfinished == null
                     ? HeroCard(
                         eyebrow: 'Your next good move',
-                        title: 'A little practice.\nA stronger game.',
+                        title: 'Ready for your next move?',
                         action: HeroButton(
                           label: 'Play a game',
                           icon: Icons.play_arrow_rounded,
@@ -700,7 +708,23 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => StatisticsScreen(repo: widget.repo),
+                  builder: (_) => StatisticsScreen(
+                    repo: widget.repo,
+                    onOpenRepertoires: repertoires,
+                    onOpenGame: (id) async =>
+                        open(await widget.repo.load(id), study: true),
+                  ),
+                ),
+              ),
+            ),
+            ActionTile(
+              title: 'Continue learning',
+              subtitle: 'Resume your guided course',
+              icon: Icons.school_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LessonsScreen(repo: widget.repo),
                 ),
               ),
             ),
@@ -709,7 +733,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
           if (tab == 1) ...[
             HeroCard(
               eyebrow: 'Play Stockfish',
-              title: 'Make room for practice.',
+              title: 'Play at your pace.',
               detail: 'Five difficulty levels, optional clocks, fully offline.',
               action: HeroButton(
                 label: 'New engine game',
@@ -720,6 +744,29 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
             const SectionLabel('Saved games'),
           ],
           if (tab == 2) ...[
+            ActionTile(
+              title: 'Guided lessons',
+              subtitle: '24 lessons · Beginner to intermediate',
+              icon: Icons.school_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LessonsScreen(repo: widget.repo),
+                ),
+              ),
+            ),
+            ActionTile(
+              title: 'Coordinate training',
+              subtitle: 'Find and name squares · Practice or timed challenge',
+              icon: Icons.grid_on,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CoordinateScreen(repo: widget.repo),
+                ),
+              ),
+            ),
+
             ActionTile(
               title: 'Analysis board',
               subtitle: 'Explore positions and save your ideas',
@@ -765,7 +812,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
               ),
               onChanged: (s) => setState(() => search = s),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -794,7 +841,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             FilledButton.tonalIcon(
               style: FilledButton.styleFrom(
                 backgroundColor: context.colors.primaryContainer,
@@ -804,6 +851,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
               icon: const Icon(Icons.file_open_outlined),
               label: const Text('Import PGN'),
             ),
+            const SizedBox(height: 12),
           ],
           if (tab != 2)
             FutureBuilder(
@@ -946,7 +994,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                               if (action == 'delete' && context.mounted) {
                                 final yes = await showDialog<bool>(
                                   context: context,
-                                  builder: (c) => AlertDialog(
+                                  builder: (c) => ActionDialog(
                                     title: const Text(
                                       'Delete game and its history?',
                                     ),
@@ -1126,7 +1174,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                                   if (!context.mounted) return;
                                   final yes = await showDialog<bool>(
                                     context: context,
-                                    builder: (c) => AlertDialog(
+                                    builder: (c) => ActionDialog(
                                       title: const Text('Delete repertoire?'),
                                       content: const Text(
                                         'Its drill history will be removed. The source study stays in your library.',

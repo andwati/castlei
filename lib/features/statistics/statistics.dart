@@ -6,10 +6,22 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../core/storage/repository.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
+import 'insights.dart';
+import 'insights_view.dart';
+import '../puzzles/training_screen.dart';
+import '../learn/lesson_screen.dart';
+import '../learn/coordinates.dart';
 
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key, required this.repo});
+  const StatisticsScreen({
+    super.key,
+    required this.repo,
+    this.onOpenGame,
+    this.onOpenRepertoires,
+  });
   final Repository repo;
+  final Future<void> Function(String)? onOpenGame;
+  final Future<void> Function()? onOpenRepertoires;
   @override
   State<StatisticsScreen> createState() => _StatsState();
 }
@@ -187,14 +199,11 @@ class _StatsState extends State<StatisticsScreen> {
               );
             }
 
-            final dates = <String, int>{};
-            for (final a in attempts) {
-              final day = DateTime.fromMillisecondsSinceEpoch(a['created'])
-                  .toLocal()
-                  .toIso8601String()
-                  .substring(0, 10);
-              dates[day] = (dates[day] ?? 0) + 1;
-            }
+            final dates = calendarActivity(
+              attempts.cast<Map<String, dynamic>>(),
+              DateTime.now(),
+              days,
+            );
             final daily = dates.values.toList();
             final themes = <String, List<int>>{};
             for (final a in puzzles) {
@@ -253,6 +262,74 @@ class _StatsState extends State<StatisticsScreen> {
                     ),
                   ),
                 ),
+                const SectionLabel('Training trends'),
+                for (final kind in [
+                  'puzzle',
+                  'opening',
+                  'lesson',
+                  'coordinate',
+                ]) ...[
+                  Builder(
+                    builder: (context) {
+                      final rows = attempts
+                          .where((a) => a['kind'] == kind)
+                          .toList();
+                      final first = rows.take(rows.length ~/ 2).toList();
+                      final recent = rows.skip(rows.length ~/ 2).toList();
+                      String summary(List rows) {
+                        if (rows.isEmpty) return '—';
+                        if (kind == 'coordinate') {
+                          var correct = 0, count = 0;
+                          for (final row in rows) {
+                            final m = jsonDecode(row['metadata']);
+                            correct += (m['correct'] ?? 0) as int;
+                            count += (m['attempts'] ?? 0) as int;
+                          }
+                          return '$correct / $count correct';
+                        }
+                        final solved = rows
+                            .where((a) => a['success'] == 1)
+                            .length;
+                        final ms = rows.fold<int>(
+                          0,
+                          (sum, a) => sum + (a['duration'] as int),
+                        );
+                        final helped = rows.where((a) => a['hints'] > 0).length;
+                        return '$solved/${rows.length} unaided · ${(ms / rows.length / 1000).toStringAsFixed(1)}s avg · $helped with hints';
+                      }
+
+                      return Card(
+                        child: ListTile(
+                          title: Text(
+                            {
+                              'puzzle': 'Tactics',
+                              'opening': 'Opening recall',
+                              'lesson': 'Lessons',
+                              'coordinate': 'Coordinates',
+                            }[kind]!,
+                          ),
+                          subtitle: Text(
+                            'Earlier: ${summary(first)}\nRecent: ${summary(recent)}',
+                          ),
+                          onTap:
+                              kind == 'opening' &&
+                                  widget.onOpenRepertoires != null
+                              ? widget.onOpenRepertoires
+                              : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => kind == 'lesson'
+                                        ? LessonsScreen(repo: widget.repo)
+                                        : kind == 'coordinate'
+                                        ? CoordinateScreen(repo: widget.repo)
+                                        : TrainingScreen(repo: widget.repo),
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
                 const SectionLabel('Practice activity'),
                 Card(
                   child: Padding(
@@ -275,7 +352,43 @@ class _StatsState extends State<StatisticsScreen> {
                               BarChartData(
                                 borderData: FlBorderData(show: false),
                                 gridData: const FlGridData(show: false),
-                                titlesData: const FlTitlesData(show: false),
+                                titlesData: FlTitlesData(
+                                  topTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  rightTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  leftTitles: const AxisTitles(
+                                    axisNameWidget: Text('Attempts'),
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      reservedSize: 32,
+                                    ),
+                                  ),
+                                  bottomTitles: AxisTitles(
+                                    axisNameWidget: const Text('Date'),
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      reservedSize: 24,
+                                      interval: (daily.length / 4)
+                                          .ceil()
+                                          .clamp(1, 100000)
+                                          .toDouble(),
+                                      getTitlesWidget: (v, _) {
+                                        final i = v.toInt();
+                                        return Text(
+                                          i >= 0 && i < dates.length
+                                              ? dates.keys
+                                                    .elementAt(i)
+                                                    .substring(5)
+                                              : '',
+                                          style: const TextStyle(fontSize: 10),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
                                 barGroups: [
                                   for (var i = 0; i < daily.length; i++)
                                     BarChartGroupData(
@@ -319,6 +432,12 @@ class _StatsState extends State<StatisticsScreen> {
                 const SizedBox(height: 8),
                 for (final skill in [0, 5, 10, 15, 20])
                   _record(context, skill, games),
+                InsightsView(
+                  repo: widget.repo,
+                  days: days,
+                  category: category,
+                  onOpenGame: widget.onOpenGame,
+                ),
                 if (themes.isNotEmpty) const SectionLabel('Puzzle themes'),
                 for (final t in themes.entries)
                   Card(
@@ -331,7 +450,7 @@ class _StatsState extends State<StatisticsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  t.key,
+                                  '${t.key}${t.value[0] < 5 ? ' · Keep training' : ''}',
                                   style: context.text.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -355,6 +474,47 @@ class _StatsState extends State<StatisticsScreen> {
                         ],
                       ),
                     ),
+                  ),
+                if (themes.entries.any((e) => e.value[0] >= 5)) ...[
+                  const SectionLabel('Practice next'),
+                  Builder(
+                    builder: (context) {
+                      final ranked =
+                          themes.entries.where((e) => e.value[0] >= 5).toList()
+                            ..sort(
+                              (a, b) => (a.value[1] / a.value[0]).compareTo(
+                                b.value[1] / b.value[0],
+                              ),
+                            );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Strongest theme: ${ranked.last.key} · ${ranked.last.value[1]} / ${ranked.last.value[0]} unaided',
+                          ),
+                          ActionTile(
+                            title: 'Practice ${ranked.first.key}',
+                            subtitle:
+                                '${ranked.first.value[1]} of ${ranked.first.value[0]} solved unaided · Your lowest theme success rate',
+                            icon: Icons.extension_outlined,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TrainingScreen(
+                                  repo: widget.repo,
+                                  initialTheme: ranked.first.key,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+                if ((cards['due'] ?? 0) > 0)
+                  Text(
+                    '${cards['due']} repertoire cards are due. Open Learn → Opening repertoires to review.',
                   ),
                 if (attempts.isNotEmpty || games.isNotEmpty)
                   Padding(

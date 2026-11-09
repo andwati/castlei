@@ -164,7 +164,7 @@ class _PackState extends State<PackScreen> {
   Future<void> _remove(Map<String, dynamic> p) async {
     final yes = await showDialog<bool>(
       context: context,
-      builder: (c) => AlertDialog(
+      builder: (c) => ActionDialog(
         title: Text('Remove ${p['id']}?'),
         content: const Text(
           'Its puzzles are deleted from this device. Your completed attempts and statistics are kept.',

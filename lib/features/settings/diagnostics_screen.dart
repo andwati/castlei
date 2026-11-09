@@ -73,7 +73,7 @@ class _DiagnosticsState extends State<DiagnosticsScreen> {
                 label: const Text('Send diagnostics'),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             IconButton.filledTonal(
               tooltip: 'Copy report',
               onPressed: report == null
@@ -84,6 +84,7 @@ class _DiagnosticsState extends State<DiagnosticsScreen> {
                     },
               icon: const Icon(Icons.copy_rounded),
             ),
+            const SizedBox(width: 12),
             IconButton.filledTonal(
               tooltip: 'Refresh',
               onPressed: () {

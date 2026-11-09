@@ -7,15 +7,23 @@ import '../../core/diagnostics/analytics.dart';
 import '../../core/notifications/notifications.dart';
 import '../../core/ui/board.dart';
 import '../../core/ui/theme.dart';
+import '../../core/ui/board_workspace.dart';
+import '../../core/ui/sfx.dart';
 import '../../core/ui/widgets.dart';
 import '../../core/chess/model.dart';
 import '../../core/storage/repository.dart';
 import 'training.dart';
 
 class TrainingScreen extends StatefulWidget {
-  const TrainingScreen({super.key, required this.repo, this.repertoire});
+  const TrainingScreen({
+    super.key,
+    required this.repo,
+    this.repertoire,
+    this.initialTheme = '',
+  });
   final Repository repo;
   final String? repertoire;
+  final String initialTheme;
   @override
   State<TrainingScreen> createState() => _TrainingState();
 }
@@ -23,6 +31,9 @@ class TrainingScreen extends StatefulWidget {
 class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
   List<Map<String, dynamic>> items = [];
   int index = 0, ply = 0, hints = 0;
+  bool sound = false, haptics = true, revealing = false;
+  String? lastMove;
+  int revealPly = 0;
   bool failed = false, complete = false, busy = false, loading = true;
   String message = 'Find the move';
   Position? position;
@@ -36,6 +47,8 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Analytics.screen(opening ? 'drills' : 'puzzles');
+    theme = widget.initialTheme;
+    _preferences();
     load();
   }
 
@@ -48,7 +61,49 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    state == AppLifecycleState.resumed ? watch.start() : watch.stop();
+    if (state == AppLifecycleState.resumed && !loading && !complete) {
+      watch.start();
+    } else {
+      watch.stop();
+    }
+  }
+
+  Future<void> _preferences() async {
+    sound = await widget.repo.preference('sound', false);
+    haptics = await widget.repo.preference('haptics', true);
+  }
+
+  void _play(String uci) {
+    final move = Move.parse(uci)!;
+    final san = position!.makeSan(move).$2;
+    position = position!.play(move);
+    lastMove = uci;
+    Sfx.play(Sfx.forSan(san), sound: sound, haptics: haptics);
+  }
+
+  void _reveal(int next) {
+    position = Chess.fromSetup(Setup.parseFen(items[index]['fen']));
+    lastMove = null;
+    for (final uci in solution.take(next)) {
+      position = position!.play(Move.parse(uci)!);
+      lastMove = uci;
+    }
+    revealPly = next;
+    setState(() {});
+  }
+
+  String get solutionSan {
+    Position p = Chess.fromSetup(Setup.parseFen(items[index]['fen']));
+    final out = <String>[];
+    for (final uci in solution) {
+      final move = Move.parse(uci)!;
+      if (!p.isLegal(move)) break;
+      final next = p.makeSan(move);
+      out.add(next.$2);
+      p = next.$1;
+      if (opening) break;
+    }
+    return out.join(' ');
   }
 
   Future<void> load() async {
@@ -88,6 +143,9 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
     position = Chess.fromSetup(Setup.parseFen(item['fen']));
     solution = List<String>.from(jsonDecode(item['moves']));
     ply = 0;
+    lastMove = null;
+    revealing = false;
+    revealPly = 0;
     hints = 0;
     failed = false;
     complete = false;
@@ -160,9 +218,11 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
     }
     busy = true;
     setState(() {
-      position = position!.play(m);
+      _play(normalized);
       ply++;
-      message = 'Good move';
+      message = opening || ply == solution.length
+          ? 'Good move'
+          : 'Opponent’s reply…';
     });
     if (opening || ply == solution.length) {
       await finish(!failed && hints == 0);
@@ -172,9 +232,13 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
     } else {
       await Future<void>.delayed(const Duration(milliseconds: 350));
       if (!mounted) return;
-      position = position!.play(Move.parse(solution[ply])!);
+      _play(solution[ply]);
       ply++;
-      if (ply == solution.length) await finish(!failed && hints == 0);
+      if (ply == solution.length) {
+        await finish(!failed && hints == 0);
+      } else {
+        message = 'Your turn · Find the continuation';
+      }
     }
     busy = false;
     if (mounted) setState(() {});
@@ -187,7 +251,7 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
     ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
-        : ListView(
+        : BoardWorkspace(
             padding: pagePadding(context),
             children: [
               if (!opening)
@@ -287,8 +351,14 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
+                TurnCue(
+                  position: position!,
+                  detail:
+                      'You play ${Chess.fromSetup(Setup.parseFen(items[index]['fen'])).turn == Side.white ? 'White' : 'Black'}',
+                ),
                 ChessBoard(
                   position: position!,
+                  lastMove: lastMove,
                   flipped:
                       Chess.fromSetup(Setup.parseFen(items[index]['fen']))
                           .turn ==
@@ -320,31 +390,52 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 12),
                 if (!complete)
-                  Row(
+                  ToolRow(
                     children: [
-                      Expanded(
-                        child: ToolButton(
-                          icon: Icons.lightbulb_outline_rounded,
-                          label: 'Hint',
-                          onTap: () => setState(() => hints++),
-                        ),
+                      ToolButton(
+                        icon: Icons.lightbulb_outline_rounded,
+                        label: 'Hint',
+                        onTap: () => setState(() => hints++),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ToolButton(
-                          icon: Icons.visibility_outlined,
-                          label: 'Reveal',
-                          onTap: () async {
-                            setState(() {
-                              failed = true;
-                              message = 'Solution: ${solution.join(' ')}';
-                            });
-                            await finish(false);
-                          },
-                        ),
+                      ToolButton(
+                        icon: Icons.visibility_outlined,
+                        label: 'Reveal',
+                        onTap: () async {
+                          setState(() {
+                            failed = true;
+                            message = 'Solution: $solutionSan';
+                            revealing = true;
+                          });
+                          await finish(false);
+                          if (mounted) _reveal(0);
+                        },
                       ),
                     ],
                   ),
+                if (revealing) const SizedBox(height: 12),
+                if (revealing)
+                  Row(
+                    spacing: 12,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        tooltip: 'Previous solution move',
+                        onPressed: revealPly > 0
+                            ? () => _reveal(revealPly - 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      Text('$revealPly / ${opening ? 1 : solution.length}'),
+                      IconButton(
+                        tooltip: 'Next solution move',
+                        onPressed: revealPly < (opening ? 1 : solution.length)
+                            ? () => _reveal(revealPly + 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                if (complete) const SizedBox(height: 12),
                 if (complete && index + 1 < items.length)
                   FilledButton.icon(
                     onPressed: () => setState(() {

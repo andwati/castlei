@@ -1,6 +1,6 @@
 # Castlei
 
-A private chess companion for Android (iOS prepared). Play the Stockfish engine on your phone, analyse and review games with an evaluation graph, drill tactics and openings, and keep everything on the device. An account, cloud backup, crash reports and analytics are all optional.
+A private chess companion for Android (iOS prepared). Play the Stockfish engine on your phone, analyse and review games with an evaluation graph, drill tactics and openings, follow 24 guided lessons, train board coordinates, and track your progress on the device. An account, cloud backup, crash reports and analytics are all optional.
 
 Website: https://castlei.andwati.com. Licensed under the GNU GPL v3.0 (see `LICENSE`); third-party notices are in the app (Settings → Open-source software) and in `NOTICE.md`.
 

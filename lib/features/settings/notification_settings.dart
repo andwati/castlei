@@ -82,7 +82,7 @@ class _NotifState extends State<NotificationSettingsScreen> {
                         tone: Tone.info,
                         icon: Icons.notifications_off_outlined,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       FilledButton(
                         onPressed: () async {
                           granted = await Notifications.ensurePermission();

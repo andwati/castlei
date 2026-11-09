@@ -39,7 +39,7 @@ Future<void> playE4(WidgetTester t) async {
   await t.tap(sq('e2'));
   await t.pump(const Duration(milliseconds: 300));
   await t.tap(sq('e4'));
-  await waitFor(t, find.text('Your move'), seconds: 15);
+  await waitFor(t, find.textContaining('Your move'), seconds: 15);
 }
 
 void main() {
@@ -97,7 +97,7 @@ void main() {
   testWidgets('repertoire screen opens from Study', (t) async {
     await app.main();
     await t.pumpAndSettle();
-    await t.tap(find.text('Study'));
+    await t.tap(find.text('Learn'));
     await t.pumpAndSettle();
     await t.tap(find.text('Opening repertoires'));
     await t.pumpAndSettle();
@@ -121,7 +121,7 @@ void main() {
   testWidgets('pack catalog refresh and install over network', (t) async {
     await app.main();
     await t.pumpAndSettle();
-    await t.tap(find.text('Study'));
+    await t.tap(find.text('Learn'));
     await t.pumpAndSettle();
     await t.tap(find.text('Puzzle collections'));
     await t.pumpAndSettle();

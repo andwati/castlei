@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -19,8 +20,10 @@ class ChessBoard extends StatefulWidget {
     this.arrow,
     this.coordinates = true,
     this.lastMove,
+    this.onIllegalMove,
   });
   final Position position;
+  final VoidCallback? onIllegalMove;
   final void Function(Move) onMove;
   final bool flipped, enabled, drawing, coordinates;
   final List<String> shapes;
@@ -37,7 +40,15 @@ class _Tracked {
 }
 
 class _BoardState extends State<ChessBoard> {
-  Square? selected, dragFrom;
+  Square? selected, dragFrom, rejected;
+  Offset? dragPosition;
+  Timer? rejectionTimer;
+  @override
+  void dispose() {
+    rejectionTimer?.cancel();
+    super.dispose();
+  }
+
   // Pieces keep an identity across moves so they can slide to new squares.
   Map<Square, _Tracked> _pieces = {};
   int _nextId = 0;
@@ -134,7 +145,8 @@ class _BoardState extends State<ChessBoard> {
                     ),
                     const SizedBox(height: 16),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 12,
                       children: [
                         for (final r in [
                           Role.queen,
@@ -149,8 +161,14 @@ class _BoardState extends State<ChessBoard> {
                               borderRadius: BorderRadius.circular(16),
                               onTap: () => Navigator.pop(c, r),
                               child: Container(
-                                width: 72,
-                                height: 72,
+                                width: math.min(
+                                  72,
+                                  (MediaQuery.sizeOf(c).width - 76) / 4,
+                                ),
+                                height: math.min(
+                                  72,
+                                  (MediaQuery.sizeOf(c).width - 76) / 4,
+                                ),
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: Theme.of(c)
@@ -181,7 +199,24 @@ class _BoardState extends State<ChessBoard> {
         return;
       }
     }
-    setState(() => selected = p.board.pieceAt(s)?.color == p.turn ? s : null);
+    if (selected != null &&
+        s != selected &&
+        p.board.pieceAt(s)?.color != p.turn) {
+      widget.onIllegalMove?.call();
+      setState(() => rejected = s);
+      rejectionTimer?.cancel();
+      rejectionTimer = Timer(const Duration(milliseconds: 250), () {
+        if (mounted) setState(() => rejected = null);
+      });
+      return;
+    }
+    setState(
+      () => selected = selected == s
+          ? null
+          : p.board.pieceAt(s)?.color == p.turn
+          ? s
+          : null,
+    );
   }
 
   @override
@@ -221,28 +256,50 @@ class _BoardState extends State<ChessBoard> {
                 children: [
                   GestureDetector(
                     onPanStart: (d) {
-                      dragFrom = squareAt(d.localPosition);
-                      if (!widget.drawing) setState(() => selected = dragFrom);
+                      if (!widget.enabled && !widget.drawing) return;
+                      final from = squareAt(d.localPosition);
+                      if (!widget.drawing &&
+                          widget.position.board.pieceAt(from)?.color !=
+                              widget.position.turn) {
+                        return;
+                      }
+                      setState(() {
+                        dragFrom = from;
+                        selected = from;
+                        dragPosition = d.localPosition;
+                      });
                     },
-                    onPanEnd: (_) => dragFrom = null,
-                    onPanUpdate: (d) {},
-                    onPanDown: (d) {},
+                    onPanUpdate: (d) {
+                      if (dragFrom != null) {
+                        setState(() => dragPosition = d.localPosition);
+                      }
+                    },
+                    onPanCancel: () => setState(() {
+                      dragFrom = null;
+                      dragPosition = null;
+                    }),
+                    onPanEnd: (_) {
+                      final from = dragFrom;
+                      final offset = dragPosition;
+                      if (from == null || offset == null) return;
+                      setState(() {
+                        dragFrom = null;
+                        dragPosition = null;
+                      });
+                      if (offset.dx < 0 ||
+                          offset.dy < 0 ||
+                          offset.dx >= box.maxWidth ||
+                          offset.dy >= box.maxWidth) {
+                        return;
+                      }
+                      final to = squareAt(offset);
+                      if (widget.drawing) {
+                        widget.onShape?.call('G${from.name}${to.name}');
+                      } else if (to != from) {
+                        choose(to);
+                      }
+                    },
                     child: Listener(
-                      onPointerUp: (e) {
-                        if (dragFrom != null) {
-                          final to = squareAt(e.localPosition);
-                          if (to != dragFrom) {
-                            if (widget.drawing) {
-                              widget.onShape?.call(
-                                'G${dragFrom!.name}${to.name}',
-                              );
-                            } else {
-                              choose(to);
-                            }
-                          }
-                          dragFrom = null;
-                        }
-                      },
                       child: GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         padding: EdgeInsets.zero,
@@ -262,7 +319,9 @@ class _BoardState extends State<ChessBoard> {
                           final isLast = last.contains(sq.name);
                           final isSel = selected == sq;
                           final isCheck = kingInCheck == sq;
-                          final color = isSel
+                          final color = rejected == sq
+                              ? tk.check
+                              : isSel
                               ? Color.alphaBlend(
                                   tk.selected.withValues(alpha: .55),
                                   base,
@@ -360,37 +419,54 @@ class _BoardState extends State<ChessBoard> {
                       ),
                     ),
                   ),
+                  if (dragFrom != null &&
+                      dragPosition != null &&
+                      !widget.drawing &&
+                      widget.position.board.pieceAt(dragFrom!) != null)
+                    Positioned(
+                      left: dragPosition!.dx - size / 2,
+                      top: dragPosition!.dy - size / 2,
+                      width: size,
+                      height: size,
+                      child: IgnorePointer(
+                        child: SvgPicture.asset(
+                          'assets/pieces/${widget.position.turn == Side.white ? 'w' : 'b'}${widget.position.board.pieceAt(dragFrom!)!.role.letter.toUpperCase()}.svg',
+                        ),
+                      ),
+                    ),
                   IgnorePointer(
                     child: SizedBox.square(
                       dimension: box.maxWidth,
                       child: Stack(
                         children: [
                           for (final e in _pieces.entries)
-                            AnimatedPositioned(
-                              key: ValueKey(e.value.id),
-                              duration: MediaQuery.disableAnimationsOf(context)
-                                  ? Duration.zero
-                                  : const Duration(milliseconds: 150),
-                              curve: Curves.easeOutCubic,
-                              left:
-                                  (widget.flipped
-                                      ? 7 - e.key.file
-                                      : e.key.file) *
-                                  size,
-                              top:
-                                  (widget.flipped
-                                      ? e.key.rank
-                                      : 7 - e.key.rank) *
-                                  size,
-                              width: size,
-                              height: size,
-                              child: Padding(
-                                padding: EdgeInsets.all(size * .06),
-                                child: SvgPicture.asset(
-                                  'assets/pieces/${e.value.piece.color == Side.white ? 'w' : 'b'}${e.value.piece.role.letter.toUpperCase()}.svg',
+                            if (e.key != dragFrom || widget.drawing)
+                              AnimatedPositioned(
+                                key: ValueKey(e.value.id),
+                                duration:
+                                    MediaQuery.disableAnimationsOf(context)
+                                    ? Duration.zero
+                                    : const Duration(milliseconds: 150),
+                                curve: Curves.easeOutCubic,
+                                left:
+                                    (widget.flipped
+                                        ? 7 - e.key.file
+                                        : e.key.file) *
+                                    size,
+                                top:
+                                    (widget.flipped
+                                        ? e.key.rank
+                                        : 7 - e.key.rank) *
+                                    size,
+                                width: size,
+                                height: size,
+                                child: Padding(
+                                  padding: EdgeInsets.all(size * .06),
+                                  child: SvgPicture.asset(
+                                    'assets/pieces/${e.value.piece.color == Side.white ? 'w' : 'b'}${e.value.piece.role.letter.toUpperCase()}.svg',
+                                  ),
                                 ),
                               ),
-                            ),
                         ],
                       ),
                     ),

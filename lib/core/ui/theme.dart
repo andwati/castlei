@@ -158,12 +158,12 @@ ThemeData buildTheme(Brightness b) {
     titleLarge: t.titleLarge?.merge(_display(21, weight: 560)),
     labelLarge: t.labelLarge?.copyWith(
       fontWeight: FontWeight.w700,
-      letterSpacing: .9,
+      letterSpacing: .3,
       color: scheme.onSurfaceVariant,
     ),
   );
   final stadium = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(999),
+    borderRadius: BorderRadius.circular(12),
   );
   return base.copyWith(
     textTheme: textTheme,
@@ -180,7 +180,7 @@ ThemeData buildTheme(Brightness b) {
       elevation: 0,
       color: scheme.surfaceContainer,
       surfaceTintColor: Colors.transparent,
-      margin: const EdgeInsets.symmetric(vertical: 5),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Corner.md),
         side: BorderSide(color: scheme.outlineVariant),
@@ -193,7 +193,7 @@ ThemeData buildTheme(Brightness b) {
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      height: 72,
+      height: 64,
       backgroundColor: scheme.surfaceContainerLow,
       surfaceTintColor: Colors.transparent,
       indicatorColor: scheme.primaryContainer,
@@ -201,9 +201,15 @@ ThemeData buildTheme(Brightness b) {
         textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
       ),
     ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.all(12),
+      ),
+    ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size(64, 52),
+        minimumSize: const Size(64, 48),
         padding: const EdgeInsets.symmetric(horizontal: 22),
         shape: stadium,
         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
@@ -212,6 +218,7 @@ ThemeData buildTheme(Brightness b) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(64, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: stadium,
         side: BorderSide(color: scheme.outline),
         textStyle: const TextStyle(fontWeight: FontWeight.w600),
@@ -220,6 +227,7 @@ ThemeData buildTheme(Brightness b) {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: stadium,
         textStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
@@ -299,10 +307,12 @@ ThemeData buildTheme(Brightness b) {
 /// system bars (the app draws edge-to-edge).
 EdgeInsets pagePadding(BuildContext context, [double base = 20]) {
   final inset = MediaQuery.paddingOf(context);
+  final width = MediaQuery.sizeOf(context).width;
+  final horizontal = width > 800 ? (width - 760) / 2 : base;
   return EdgeInsets.fromLTRB(
-    base + inset.left,
+    horizontal + inset.left,
     base,
-    base + inset.right,
+    horizontal + inset.right,
     base + inset.bottom,
   );
 }

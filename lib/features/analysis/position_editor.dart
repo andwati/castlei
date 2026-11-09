@@ -87,6 +87,14 @@ class _EditorState extends State<PositionEditor> {
     body: ListView(
       padding: pagePadding(context),
       children: [
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            side == 'w' ? '♔ White to move' : '♚ Black to move',
+            style: context.text.titleMedium,
+          ),
+        ),
+        const SizedBox(height: 12),
         if (error != null) ...[
           FeedbackCard(error!, tone: Tone.bad, icon: Icons.rule_rounded),
           const SizedBox(height: 12),
@@ -127,7 +135,8 @@ class _EditorState extends State<PositionEditor> {
         ),
         const SectionLabel('Pieces'),
         Wrap(
-          spacing: 4,
+          spacing: 8,
+          runSpacing: 8,
           children: [
             for (final p in [
               'K',
@@ -159,7 +168,10 @@ class _EditorState extends State<PositionEditor> {
               ),
           ],
         ),
+        const SizedBox(height: 12),
         Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
             TextButton(
               onPressed: () => setState(() => board.fillRange(0, 64, '')),
