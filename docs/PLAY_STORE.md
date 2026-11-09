@@ -18,7 +18,7 @@ Google Cloud console → project `castlei` → Google Auth Platform (OAuth conse
 |---|---|
 | App name | Castlei |
 | User support email | your support address |
-| App logo | `design/oauth_logo_120.png` |
+| App logo | `design/branding/castlei-logo-120.png` (square, 120x120, under 1 MB, as Google asks) |
 | App home page | https://castlei.andwati.com |
 | Privacy policy | https://castlei.andwati.com/privacy |
 | Terms of service | https://castlei.andwati.com/terms |
@@ -27,6 +27,8 @@ Google Cloud console → project `castlei` → Google Auth Platform (OAuth conse
 | Audience | External, **publishing status: In production** (basic profile and email scopes need no Google verification; "Testing" only lets listed test users sign in) |
 
 Also Firebase console → Project settings → General → Public settings: public-facing name `Castlei` + support email.
+
+Logo files are in `design/branding/`: `castlei-logo-120.png` (consent screen), `castlei-logo-512.png` (also the Play Console app icon: 512x512 PNG), `castlei-logo-1024.png`, rounded versions, a cream castle on transparent (dark backgrounds only) and the SVG source.
 
 ## 3. Play Console: store listing and forms
 - Privacy policy URL: https://castlei.andwati.com/privacy

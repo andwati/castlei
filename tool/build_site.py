@@ -52,7 +52,7 @@ def page(slug, title, description, body, nav_current=""):
 <link rel="icon" type="image/png" href="/img/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/site.css">
-<script src="/js/analytics.js" defer></script>
+<script src="/js/site.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -449,7 +449,7 @@ JS = """(function () {
   var KEY = 'castlei-analytics-consent';
   var COOKIE_ID = ID.replace('G-', '');
 
-  // Respect Global Privacy Control / Do Not Track: no banner, no analytics.
+  // A Global Privacy Control / Do Not Track signal never turns analytics on by\n  // itself; we still ask, and say so in the banner.
   var signal = navigator.globalPrivacyControl === true ||
     navigator.doNotTrack === '1' || window.doNotTrack === '1';
 
@@ -566,6 +566,9 @@ JS = """(function () {
     if (current) {
       box.appendChild(el('p', 'consent-status',
         'Your current choice: ' + (current === 'granted' ? 'accepted' : 'declined') + '.'));
+    } else if (signal) {
+      box.appendChild(el('p', 'consent-status',
+        'Your browser asks sites not to track you, so analytics stay off unless you choose Accept.'));
     }
 
     var more = el('details', 'consent-more');
@@ -608,7 +611,7 @@ JS = """(function () {
     var choice = stored();
     if (choice === 'granted') {
       loadAnalytics();
-    } else if (!choice && !signal) {
+    } else if (!choice) {
       showBanner(null);
     }
     var settings = document.getElementById('analytics-settings');
@@ -645,7 +648,7 @@ if __name__ == "__main__":
         "delete-account.html": DELETE,
         "404.html": NOT_FOUND,
         "css/site.css": CSS,
-        "js/analytics.js": JS,
+        "js/site.js": JS,
         "robots.txt": ROBOTS,
         "sitemap.xml": SITEMAP,
     }.items():

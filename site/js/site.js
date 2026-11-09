@@ -4,7 +4,8 @@
   var KEY = 'castlei-analytics-consent';
   var COOKIE_ID = ID.replace('G-', '');
 
-  // Respect Global Privacy Control / Do Not Track: no banner, no analytics.
+  // A Global Privacy Control / Do Not Track signal never turns analytics on by
+  // itself; we still ask, and say so in the banner.
   var signal = navigator.globalPrivacyControl === true ||
     navigator.doNotTrack === '1' || window.doNotTrack === '1';
 
@@ -121,6 +122,9 @@
     if (current) {
       box.appendChild(el('p', 'consent-status',
         'Your current choice: ' + (current === 'granted' ? 'accepted' : 'declined') + '.'));
+    } else if (signal) {
+      box.appendChild(el('p', 'consent-status',
+        'Your browser asks sites not to track you, so analytics stay off unless you choose Accept.'));
     }
 
     var more = el('details', 'consent-more');
@@ -163,7 +167,7 @@
     var choice = stored();
     if (choice === 'granted') {
       loadAnalytics();
-    } else if (!choice && !signal) {
+    } else if (!choice) {
       showBanner(null);
     }
     var settings = document.getElementById('analytics-settings');
