@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Secret scan
         run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --no-git --source /repo --no-banner --redact
       - uses: actions/setup-java@v4

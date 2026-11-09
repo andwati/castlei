@@ -43,7 +43,7 @@ jobs:
       # Set to 'true' when the optional FIREBASE_SERVICE_ACCOUNT secret exists.
       HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history so release notes can list the commits since the last tag
 
