@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../../core/storage/repository.dart';
+import '../../core/chess/engine_opponents.dart';
+import '../../core/ui/engine_avatar.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 import 'insights.dart';
@@ -49,7 +51,6 @@ class _StatsState extends State<StatisticsScreen> {
     return {'games': games, 'attempts': attempts, 'cards': cards.first};
   }
 
-  static const levels = ['Gentle', 'Easy', 'Medium', 'Hard', 'Maximum'];
   static const standard =
       'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -83,9 +84,14 @@ class _StatsState extends State<StatisticsScreen> {
           children: [
             Row(
               children: [
+                EngineAvatar(
+                  opponent: EngineOpponent.forSkill(skill),
+                  size: 40,
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    levels[skill ~/ 5],
+                    EngineOpponent.forSkill(skill).label,
                     style: context.text.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),

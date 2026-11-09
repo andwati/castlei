@@ -38,8 +38,9 @@ void main() {
     for (final role in ['queen', 'rook', 'bishop', 'knight']) {
       final rect = t.getRect(find.bySemanticsLabel('Promote to $role'));
       expect(rect.width, greaterThanOrEqualTo(48));
-      if (previous != null)
+      if (previous != null) {
         expect(rect.left - previous.right, greaterThanOrEqualTo(12));
+      }
       previous = rect;
     }
     expect(t.takeException(), isNull);

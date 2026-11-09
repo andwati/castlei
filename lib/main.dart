@@ -25,6 +25,8 @@ import 'features/settings/settings_screen.dart';
 import 'package:quick_actions/quick_actions.dart';
 
 import 'core/chess/model.dart';
+import 'core/chess/engine_opponents.dart';
+import 'core/ui/engine_avatar.dart';
 import 'core/storage/database.dart' show AppDatabase;
 import 'core/storage/repository.dart';
 import 'core/storage/backup.dart';
@@ -320,13 +322,25 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                 if (!study) ...[
                   DropdownButtonFormField<int>(
                     initialValue: level,
+                    isExpanded: true,
+                    itemHeight: 64,
                     decoration: const InputDecoration(labelText: 'Difficulty'),
                     items: [
-                      for (var i = 0; i < 5; i++)
+                      for (final opponent in EngineOpponent.all)
                         DropdownMenuItem(
-                          value: i * 5,
-                          child: Text(
-                            ['Gentle', 'Easy', 'Medium', 'Hard', 'Maximum'][i],
+                          value: opponent.skill,
+                          child: Row(
+                            children: [
+                              EngineAvatar(opponent: opponent, size: 40),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  opponent.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],
@@ -439,7 +453,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
         '${localizations.formatMediumDate(now)} · ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(now))}';
     final title = study
         ? 'Study · $stamp'
-        : 'Stockfish · ${['Gentle', 'Easy', 'Medium', 'Hard', 'Maximum'][level ~/ 5]} · $stamp';
+        : 'Stockfish · ${EngineOpponent.forSkill(level).label} · $stamp';
     if (side == 'random') {
       side = DateTime.now().microsecond.isEven ? 'white' : 'black';
     }
@@ -452,7 +466,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
       settings: {
         'side': side,
         'skill': level,
-        'level': ['Gentle', 'Easy', 'Medium', 'Hard', 'Maximum'][level ~/ 5],
+        'level': EngineOpponent.forSkill(level).label,
         'baseMs': base * 60000,
         'increment': increment,
       },

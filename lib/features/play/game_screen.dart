@@ -7,6 +7,8 @@ import '../../core/ui/board_workspace.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/chess/openings.dart';
+import '../../core/chess/engine_opponents.dart';
+import '../../core/ui/engine_avatar.dart';
 import '../../core/diagnostics/analytics.dart';
 import '../analysis/eval_graph.dart';
 import '../../core/notifications/notifications.dart';
@@ -209,7 +211,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text(white ? '♔' : '♚', style: const TextStyle(fontSize: 24)),
+          if (!widget.study && !human)
+            EngineAvatar(opponent: EngineOpponent.fromSettings(g.settings))
+          else
+            Text(white ? '♔' : '♚', style: const TextStyle(fontSize: 24)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

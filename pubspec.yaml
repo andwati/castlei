@@ -98,6 +98,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/NOTICE.txt
+    - assets/avatars/
     - assets/pieces/
     - assets/puzzles/
     - assets/sounds/
