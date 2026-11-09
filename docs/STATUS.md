@@ -12,7 +12,7 @@
 - Not yet done: long sustained review heat test, screen reader / large text / reduced motion, audio and haptics, pack cancel/retry/remove by hand, backup/restore via the file picker UI.
 
 ## Other
-- iOS: fully configured (engine pod, Firebase, icons, Podfile, CI workflow) but **unbuilt and unverified**; see `docs/IOS.md`. Not mentioned in the app UI.
+- iOS: fully configured (engine pod, Firebase, icons, Podfile). **Verified on an iOS simulator in CI** (build, real Stockfish move, core flows); not yet built on a Mac, signed, or run on a device. See `docs/IOS.md`. Not mentioned in the app UI.
 - External config still required: release signing, Firebase config (currently falls back cleanly), public catalog (default URL is live).
 
 ## Full game on the owner phone

@@ -1,6 +1,10 @@
 # iOS: build, sign, install
 
-Everything is configured for iOS 16+, iPhone only, portrait. **None of it has been built or run yet** (no Mac so far); treat the first Mac build as the validation. The `iOS build and simulator tests` GitHub workflow builds the app and runs the real-engine and flow tests on an iOS simulator on every push, so you can get a first signal without a Mac.
+Everything is configured for iOS 16+, iPhone only, portrait.
+
+**Verified in CI (GitHub macOS runner, Apple silicon):** the app builds for the iOS simulator (CocoaPods integration, the forwarder-based engine pod, embedded Stockfish networks), the real Stockfish engine plays a move on an iPhone simulator, and the core-flow integration tests pass. The CI workflow (`ci.yml`, job `ios`) repeats this on every push to `main` and on pull requests, after the Android job passes.
+
+**Still unverified (needs a Mac and an iPhone):** device builds and signing, performance on device, Firebase on iOS (Crashlytics dSYM upload, push, Performance), Google/Apple sign-in, the iOS document picker and share sheet, VoiceOver, haptics. Treat the first Mac build as the validation of those.
 
 ## What is prepared
 - Bundle ID `com.andwati.castlei`, iPhone only, iOS 16.0, original app icon set (no alpha), portrait orientation.
@@ -28,8 +32,8 @@ flutter run -d <your iPhone>  # or Product > Archive for TestFlight
 Free Apple IDs work for installing on your own phone; builds expire after 7 days.
 
 ## Things to check on the first run (unverified)
-1. `pod install` succeeds with the forwarder-based `castlei_native` pod.
-2. The engine initializes (the app reports an engine error on Play if the symbol lookup or NNUE embedding failed).
+1. ~~`pod install` succeeds with the forwarder-based `castlei_native` pod.~~ Verified in CI.
+2. ~~The engine initializes.~~ Verified on the simulator in CI (the pod stages the downloaded NNUE files into `Pods/` before compiling, because Apple's assembler resolves `.incbin` relative to the compile directory). Check it again on a device.
 3. Release builds keep the exported `castlei_*` symbols (if not, set Build Settings > Deployment > Strip Style to "Non-Global Symbols" for Runner).
 4. Crashlytics dSYM upload phase runs in Release archives; check the Crashlytics dashboard after a release run (and a deliberate test crash if needed).
 5. Performance and Crashlytics appear for the iOS app in the console after a release run.
