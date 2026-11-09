@@ -4,6 +4,18 @@ A private chess companion for Android (iOS prepared). Play the Stockfish engine 
 
 Website: https://castlei.andwati.com. Licensed under the GNU GPL v3.0 (see `LICENSE`); third-party notices are in the app (Settings → Open-source software) and in `NOTICE.md`.
 
+<table>
+  <tr>
+    <td align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home_dark.png"><img src="docs/screenshots/home_light.png" alt="Home" width="170"></picture><br><sub>Home</sub></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/play_dark.png"><img src="docs/screenshots/play_light.png" alt="Play" width="170"></picture><br><sub>Play</sub></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/study_dark.png"><img src="docs/screenshots/study_light.png" alt="Study" width="170"></picture><br><sub>Study</sub></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/library_dark.png"><img src="docs/screenshots/library_light.png" alt="Library" width="170"></picture><br><sub>Library</sub></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings_dark.png"><img src="docs/screenshots/settings_light.png" alt="Settings" width="170"></picture><br><sub>Settings</sub></td>
+  </tr>
+</table>
+
+<sub>Screenshots follow your GitHub theme (light or dark); the app itself follows the phone's.</sub>
+
 ## Build
 ```
 ./tool/fetch_engine.sh     # pinned Stockfish source and network files, checked against SHA-256
