@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/app_info.dart';
 import '../../core/cloud/account.dart';
 import '../../core/cloud/cloud_backup.dart';
+import '../../core/cloud/entitlements.dart';
 import '../../core/diagnostics/analytics.dart';
 import '../../core/diagnostics/crash.dart';
 import '../../core/diagnostics/perf.dart';
@@ -51,12 +52,14 @@ class _SettingsState extends State<SettingsScreen> {
   int lastBackup = 0;
   bool busy = false;
   PackageInfo? info;
+  int _versionTaps = 0;
   final account = AccountService.instance;
 
   @override
   void initState() {
     super.initState();
     account.addListener(_refresh);
+    Entitlements.instance.addListener(_refresh);
     CloudBackup.changed.addListener(_refresh);
     _load();
     PackageInfo.fromPlatform().then((i) {
@@ -68,6 +71,7 @@ class _SettingsState extends State<SettingsScreen> {
   @override
   void dispose() {
     account.removeListener(_refresh);
+    Entitlements.instance.removeListener(_refresh);
     CloudBackup.changed.removeListener(_refresh);
     super.dispose();
   }
@@ -200,6 +204,89 @@ class _SettingsState extends State<SettingsScreen> {
     }, ok: 'Account deleted');
   }
 
+  Widget _plusCard(BuildContext context) {
+    final e = Entitlements.instance;
+    final c = context.colors;
+    if (e.plus) {
+      return Card(
+        child: ListTile(
+          leading: Icon(Icons.workspace_premium_rounded, color: c.tertiary),
+          title: const Text('Castlei Plus'),
+          subtitle: Text(
+            e.storePurchase
+                ? 'Unlocked. Thank you for supporting Castlei.'
+                : 'Unlocked (test unlock).',
+          ),
+          trailing: const StatusChip(
+            'Active',
+            icon: Icons.check_circle_outline,
+          ),
+        ),
+      );
+    }
+    Widget bullet(String text) => Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.check_rounded, size: 18, color: c.primary),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: context.text.bodyMedium)),
+        ],
+      ),
+    );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.workspace_premium_rounded, color: c.tertiary),
+                const SizedBox(width: 10),
+                Text('Castlei Plus', style: context.text.titleLarge),
+              ],
+            ),
+            bullet('Automatic cloud backup after finished games and daily'),
+            bullet('Keep your last 5 backups'),
+            bullet('One-time unlock, no subscription'),
+            const SizedBox(height: 10),
+            Text(
+              'Everything else stays free, including manual cloud backup (latest copy) and file export.',
+              style: context.text.bodySmall?.copyWith(
+                color: c.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: () {
+                Analytics.log('plus_unlock_tapped');
+                showDialog<void>(
+                  context: context,
+                  builder: (d) => AlertDialog(
+                    title: const Text('Castlei Plus'),
+                    content: const Text(
+                      'Purchases will open once Castlei is released in the app store.',
+                    ),
+                    actions: [
+                      FilledButton(
+                        onPressed: () => Navigator.pop(d),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.lock_open_rounded),
+              label: const Text('Unlock Plus'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _accountSection(BuildContext context) {
     if (!account.available) {
       return const FeedbackCard(
@@ -259,24 +346,37 @@ class _SettingsState extends State<SettingsScreen> {
           subtitle: const Text('Signed in'),
         ),
         SwitchListTile(
-          secondary: const Icon(Icons.cloud_sync_outlined),
+          secondary: Icon(
+            Entitlements.instance.plus
+                ? Icons.cloud_sync_outlined
+                : Icons.lock_outline_rounded,
+          ),
           title: const Text('Automatic cloud backup'),
           subtitle: Text(
-            'After finished games and daily, on Wi-Fi. Keeps the last ${CloudBackup.keep} versions. Last backup: ${_ago(lastBackup)}.',
+            Entitlements.instance.plus
+                ? 'After finished games and daily, on Wi-Fi. Keeps the last ${CloudBackup.keep} versions. Last backup: ${_ago(lastBackup)}.'
+                : 'A Castlei Plus feature. Use Back up now to keep your latest copy. Last backup: ${_ago(lastBackup)}.',
           ),
-          value: cloud,
-          onChanged: (v) async {
-            await widget.repo.setPreference('cloudBackup', v);
-            Analytics.log('setting_changed', {
-              'name': 'cloud_backup',
-              'on': v ? 1 : 0,
-            });
-            _load();
-          },
+          value: cloud && Entitlements.instance.plus,
+          onChanged: Entitlements.instance.plus
+              ? (v) async {
+                  await widget.repo.setPreference('cloudBackup', v);
+                  Analytics.log('setting_changed', {
+                    'name': 'cloud_backup',
+                    'on': v ? 1 : 0,
+                  });
+                  _load();
+                }
+              : null,
         ),
         ListTile(
           leading: const Icon(Icons.cloud_upload_outlined),
           title: const Text('Back up now'),
+          subtitle: Text(
+            Entitlements.instance.plus
+                ? 'Keeps your last 5 backups'
+                : 'Keeps your latest backup',
+          ),
           enabled: !busy,
           onTap: () => _run(CloudBackup.backupNow, ok: 'Backup complete'),
         ),
@@ -321,6 +421,8 @@ class _SettingsState extends State<SettingsScreen> {
         if (busy) const LinearProgressIndicator(),
         const SectionLabel('Account'),
         _accountSection(context),
+        const SizedBox(height: 8),
+        _plusCard(context),
         const SectionLabel('Appearance'),
         SizedBox(
           width: double.infinity,
@@ -450,6 +552,14 @@ class _SettingsState extends State<SettingsScreen> {
         GroupCard(
           children: [
             ListTile(
+              onTap: () async {
+                // Seven taps toggle the (temporary) Plus test unlock.
+                if (++_versionTaps < 7) return;
+                _versionTaps = 0;
+                final on = !Entitlements.instance.testUnlock;
+                await Entitlements.instance.setTestUnlock(widget.repo, on);
+                _snack(on ? 'Plus test unlock on' : 'Plus test unlock off');
+              },
               leading: const Icon(Icons.castle_outlined),
               title: const Text('Castlei'),
               subtitle: Text(

@@ -12,6 +12,7 @@ import '../diagnostics/crash.dart';
 import '../storage/backup.dart';
 import '../storage/repository.dart';
 import 'account.dart';
+import 'entitlements.dart';
 import 'remote_config.dart';
 
 class CloudBackupEntry {
@@ -72,7 +73,9 @@ Uint8List joinChunks(
 /// ~700 KB chunks). Runs after finished games and at most daily, on Wi-Fi only;
 /// "Back up now" always works. Keeps the last 5 versions.
 class CloudBackup {
-  static const keep = 5;
+  /// Versions kept for the current plan (1 free, 5 Plus).
+  static int get keep => Entitlements.instance.backup.keep;
+  static const maxVersions = 5;
   static const chunkSize = 700 * 1024;
   static const maxBytes = 12 * 1024 * 1024;
   static const minGap = Duration(hours: 3);
@@ -150,6 +153,10 @@ class CloudBackup {
   }) async {
     final repo = _repo;
     if (repo == null || !available || _running) return;
+    // Automatic backup is a Plus feature.
+    if (!Entitlements.instance.backup.automatic) {
+      return;
+    }
     if (!RemoteSettings.cloudBackupEnabled) return;
     try {
       if (await repo.preference('cloudBackup', true) != true) return;

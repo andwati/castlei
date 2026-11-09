@@ -1,4 +1,8 @@
 import 'package:castlei/core/cloud/cloud_backup.dart';
+import 'package:castlei/core/cloud/entitlements.dart';
+import 'package:castlei/core/storage/backup.dart';
+import 'package:castlei/core/storage/database.dart';
+import 'package:castlei/core/storage/repository.dart';
 import 'package:castlei/core/cloud/remote_config.dart';
 import 'package:castlei/core/diagnostics/analytics.dart';
 import 'package:castlei/core/notifications/notifications.dart';
@@ -162,6 +166,48 @@ void main() {
         () => joinChunks(tampered, bytes: data.length, sha256Hex: hash),
         throwsStateError,
       );
+    });
+  });
+
+  group('Castlei Plus', () {
+    test(
+      'free keeps the latest manual backup; Plus adds automatic and 5 versions',
+      () {
+        final free = backupPolicy(plus: false);
+        final plus = backupPolicy(plus: true);
+        expect(free.keep, 1);
+        expect(free.automatic, isFalse);
+        expect(plus.keep, 5);
+        expect(plus.automatic, isTrue);
+      },
+    );
+
+    test('the unlock persists, and a restored backup never carries it to another device', () async {
+      final db = AppDatabase.memory();
+      final repo = Repository(db);
+      final e = Entitlements.instance;
+      await e.load(repo);
+      expect(e.plus, isFalse);
+      expect(e.backup.keep, 1);
+      await e.setTestUnlock(repo, true);
+      expect(e.plus, isTrue);
+      expect(e.backup.automatic, isTrue);
+      // Persisted: a fresh load sees it.
+      await e.setTestUnlock(repo, true);
+      await e.load(repo);
+      expect(e.plus, isTrue);
+
+      // A backup made while unlocked ...
+      final withPlus = await BackupService(db).export();
+      // ... restored on a device that is NOT unlocked must stay locked.
+      await e.setTestUnlock(repo, false);
+      await repo.db.execute('DELETE FROM preferences WHERE "key"=?', [
+        'plusTest',
+      ]);
+      await BackupService(db).restore(withPlus);
+      await e.load(repo);
+      expect(e.plus, isFalse);
+      await db.close();
     });
   });
 }

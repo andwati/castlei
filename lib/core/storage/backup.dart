@@ -99,7 +99,13 @@ class BackupService {
       final check = await staging.rows('PRAGMA foreign_key_check');
       if (check.isNotEmpty) throw FormatException('Broken backup references');
       // Diagnostics choices belong to this device, not to the backup.
-      const deviceKeys = ['crashReports', 'perfMonitoring'];
+      const deviceKeys = [
+        'crashReports',
+        'perfMonitoring',
+        'analytics',
+        'plusStore',
+        'plusTest',
+      ];
       final deviceChoices = <String, Object?>{};
       for (final key in deviceKeys) {
         final rows = await db.rows(
