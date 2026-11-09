@@ -17,6 +17,7 @@ EMAIL = "andwatiian@gmail.com"
 DOMAIN = "castlei.andwati.com"
 EFFECTIVE = "November 9, 2026"
 YEAR = "2026"
+GA_ID = "G-CS2NHYQYX0"  # Firebase web app "Castlei website" (Google Analytics 4)
 
 
 def page(slug, title, description, body, nav_current=""):
@@ -51,6 +52,7 @@ def page(slug, title, description, body, nav_current=""):
 <link rel="icon" type="image/png" href="/img/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/site.css">
+<script src="/js/analytics.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -72,7 +74,7 @@ def page(slug, title, description, body, nav_current=""):
       </div>
       <div>
         <p class="label">Legal</p>
-        <p><a href="/privacy">Privacy policy</a><br><a href="/terms">Terms of use</a><br><a href="/delete-account">Delete your account</a></p>
+        <p><a href="/privacy">Privacy policy</a><br><a href="/terms">Terms of use</a><br><a href="/delete-account">Delete your account</a><br><button type="button" class="linklike" id="analytics-settings">Analytics settings</button></p>
       </div>
       <div>
         <p class="label">Contact</p>
@@ -129,7 +131,7 @@ INDEX = page(
       <p class="lead">{NAME} is a private chess companion. Play the Stockfish engine at five levels, review your games, and drill tactics and opening lines. It works fully offline.</p>
       <p class="cta">
         <span class="pill">Coming soon to Google Play</span>
-        <a class="btn ghost" href="mailto:{EMAIL}?subject={NAME}%20early%20access">Ask for early access</a>
+        <a class="btn ghost" data-event="early_access_click" href="mailto:{EMAIL}?subject={NAME}%20early%20access">Ask for early access</a>
       </p>
       <ul class="ticks">
         <li>No account needed</li>
@@ -214,6 +216,7 @@ PRIVACY = legal(
 <li>Crash reports, performance timings and usage analytics are <strong>anonymous, on by default, and each can be switched off</strong> in Settings.</li>
 <li>We never collect your positions, moves, comments, game titles or the contents of your files as analytics or crash data.</li>
 <li>We do not sell your data, show ads, or use it for advertising.</li>
+<li>This website uses analytics cookies <strong>only if you accept</strong>.</li>
 </ul>"""),
         ("device", "Data that stays on your device", """<p>Games and their variations, comments and annotations, engine analysis results, repertoires and drill schedules, puzzle history, statistics, installed puzzle packs, and your preferences are stored in a local database in the app's private storage. We do not receive this data unless you use cloud backup, export a file, or share a diagnostics report yourself. Uninstalling the app removes it from your device.</p>
 <p>Reminder notifications (due drills, the daily puzzle, an unfinished game) are scheduled on your device. They send no data to us.</p>"""),
@@ -229,6 +232,8 @@ PRIVACY = legal(
 <li><strong>Remote settings (Firebase Remote Config):</strong> the app periodically downloads configuration values (for example engine time limits); this involves your IP address and a Firebase installation ID.</li>
 </ul>
 <p>This information is not linked to the content of your games and we do not use it to identify you. Crashlytics data is kept for 90 days; the other services keep data for the standard periods set by Firebase, after which it is deleted automatically.</p>"""),
+        ("website", "This website", f"""<p>When you visit this website we do not set analytics cookies unless you choose <em>Accept</em> in the banner. If you accept, we use <strong>Google Analytics</strong> (through Firebase) to count visits and see which pages and links are used. It records the pages you view and the links you click, your approximate location (country or city, derived from your IP address, which is not stored), the browser, device and language, and how you arrived (for example from a search or another site). It sets two cookies, <code>_ga</code> and <code>_ga_*</code>, which last up to 13 months and contain a random identifier. We do not use Google Signals, advertising features or ad personalisation, and we do not combine this data with the {NAME} app or with anything that identifies you.</p>
+<p>If you decline, or your browser sends a Global Privacy Control or Do Not Track signal, no analytics script is loaded. You can change your choice at any time with <em>Analytics settings</em> in the footer of every page. Declining or withdrawing deletes the analytics cookies it set. The legal basis is your consent. Like any web host, Firebase Hosting keeps standard server logs (such as IP address and requested page) for security and operation.</p>"""),
         ("share", "Diagnostics reports you choose to send", f"""<p><em>Settings &rarr; Privacy and diagnostics &rarr; Diagnostics</em> shows a snapshot of what {NAME} knows on your device: app and operating system versions, which switches are on, counts of games and drills, and a short list of recent scrubbed events. It contains no games, positions, comments, titles, names, email address or file names. Nothing is sent unless you tap <em>Send diagnostics</em> and choose where to share it, for example by email to us.</p>"""),
         ("purchases", f"Purchases ({NAME} Plus)", f"""<p>When {NAME} Plus becomes available, the purchase is handled by Google Play. Google processes your payment and we do not receive your card or payment details. The app will receive confirmation of whether the purchase is active on your Google account so it can unlock the feature.</p>"""),
         ("use", "How we use data and why", """<ul>
@@ -414,7 +419,131 @@ header nav a:hover,header nav a[aria-current]{color:var(--teal);text-decoration:
 @media (max-width:640px){.foot-grid{grid-template-columns:1fr}}
 .foot p{margin:0 0 10px}
 .foot .fine{margin-top:28px}
+.linklike{background:none;border:0;padding:0;font:inherit;color:var(--teal);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:20;max-width:640px;margin-inline:auto;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+.consent p{margin:0 0 12px;font-size:.95rem}
+.consent .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.consent button{font:inherit;font-weight:700;padding:10px 20px;border-radius:999px;border:2px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer}
+.consent button:hover{background:color-mix(in srgb,var(--teal) 14%,transparent)}
+.consent button.primary{background:var(--teal);color:var(--bg)}
+@media (prefers-color-scheme: dark){.consent button.primary{color:#00201c}}
 """
+
+JS = """(function () {
+  'use strict';
+  var ID = '__GA_ID__';
+  var KEY = 'castlei-analytics-consent';
+
+  // Respect Global Privacy Control / Do Not Track: no banner, no analytics.
+  var signal = navigator.globalPrivacyControl === true ||
+    navigator.doNotTrack === '1' || window.doNotTrack === '1';
+
+  function stored() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+  function save(v) { try { localStorage.setItem(KEY, v); } catch (e) { /* ignore */ } }
+
+  function clearCookies() {
+    var host = location.hostname, parts = host.split('.');
+    var domains = ['', 'domain=' + host + ';', 'domain=.' + parts.slice(-2).join('.') + ';'];
+    document.cookie.split(';').forEach(function (c) {
+      var name = c.split('=')[0].trim();
+      if (name === '_ga' || name.indexOf('_ga_') === 0) {
+        domains.forEach(function (d) { document.cookie = name + '=; Max-Age=0; path=/; ' + d; });
+      }
+    });
+  }
+
+  function loadAnalytics() {
+    if (window.__castleiGA) return;
+    window.__castleiGA = true;
+    window['ga-disable-' + ID] = false;
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    window.gtag('js', new Date());
+    window.gtag('config', ID, {
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false,
+      cookie_expires: 33696000
+    });
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ID);
+    document.head.appendChild(s);
+  }
+
+  function closeBanner() {
+    var b = document.getElementById('consent');
+    if (b) b.remove();
+  }
+
+  function choose(value) {
+    var wasGranted = stored() === 'granted';
+    save(value);
+    closeBanner();
+    if (value === 'granted') {
+      loadAnalytics();
+    } else {
+      window['ga-disable-' + ID] = true;
+      clearCookies();
+      if (wasGranted || window.__castleiGA) location.reload();
+    }
+  }
+
+  function showBanner() {
+    if (document.getElementById('consent')) return;
+    var box = document.createElement('div');
+    box.className = 'consent';
+    box.id = 'consent';
+    box.setAttribute('role', 'region');
+    box.setAttribute('aria-label', 'Analytics cookies');
+
+    var p = document.createElement('p');
+    p.appendChild(document.createTextNode(
+      'May we use Google Analytics cookies to count visits and see which pages are useful? ' +
+      'No ads and your data is never sold. '));
+    var a = document.createElement('a');
+    a.href = '/privacy#website';
+    a.textContent = 'Details';
+    p.appendChild(a);
+    box.appendChild(p);
+
+    var row = document.createElement('div');
+    row.className = 'row';
+    var yes = document.createElement('button');
+    yes.type = 'button';
+    yes.className = 'primary';
+    yes.textContent = 'Accept analytics';
+    yes.addEventListener('click', function () { choose('granted'); });
+    var no = document.createElement('button');
+    no.type = 'button';
+    no.textContent = 'Decline';
+    no.addEventListener('click', function () { choose('denied'); });
+    row.appendChild(yes);
+    row.appendChild(no);
+    box.appendChild(row);
+    document.body.appendChild(box);
+    yes.focus({ preventScroll: true });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var choice = stored();
+    if (choice === 'granted') {
+      loadAnalytics();
+    } else if (!choice && !signal) {
+      showBanner();
+    }
+    var settings = document.getElementById('analytics-settings');
+    if (settings) settings.addEventListener('click', showBanner);
+  });
+
+  // Measure clicks on elements marked data-event (only after consent).
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-event]') : null;
+    if (el && window.gtag && stored() === 'granted') {
+      window.gtag('event', el.getAttribute('data-event'));
+    }
+  });
+})();
+""".replace('__GA_ID__', GA_ID)
 
 ROBOTS = f"User-agent: *\nAllow: /\nSitemap: https://{DOMAIN}/sitemap.xml\n"
 SITEMAP = (
@@ -428,6 +557,7 @@ SITEMAP = (
 
 if __name__ == "__main__":
     (ROOT / "css").mkdir(parents=True, exist_ok=True)
+    (ROOT / "js").mkdir(parents=True, exist_ok=True)
     for name, content in {
         "index.html": INDEX,
         "privacy.html": PRIVACY,
@@ -435,6 +565,7 @@ if __name__ == "__main__":
         "delete-account.html": DELETE,
         "404.html": NOT_FOUND,
         "css/site.css": CSS,
+        "js/analytics.js": JS,
         "robots.txt": ROBOTS,
         "sitemap.xml": SITEMAP,
     }.items():

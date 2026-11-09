@@ -60,3 +60,6 @@ Google Play (one-time Castlei Plus):
 Apple (later): Apple Developer Program, an App Store Connect app record, a non-consumable in-app purchase, sandbox testers, and TestFlight; the first in-app purchase is reviewed together with an app version.
 
 Until billing is connected the app shows "Unlock Plus" with a placeholder message and a hidden test unlock (tap the version in Settings seven times).
+
+## 5. Website analytics
+Google Analytics 4 through the Firebase web app "Castlei website" (measurement ID `G-CS2NHYQYX0`, set in `tool/build_site.py`). It loads only after a visitor clicks Accept in the banner, and never when the browser sends Global Privacy Control or Do Not Track. Choice is stored in the browser and can be changed with "Analytics settings" in the footer; declining removes the `_ga` cookies. Google Signals and ad personalisation are off. Clicks on elements marked `data-event` are reported as events (currently `early_access_click`). The privacy policy has a matching "This website" section. View reports in Google Analytics (property linked to the Firebase project) or Firebase console → Analytics. Set the data retention period in Analytics → Admin → Data settings → Data retention (up to 14 months).

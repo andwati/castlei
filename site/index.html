@@ -18,6 +18,7 @@
 <link rel="icon" type="image/png" href="/img/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/site.css">
+<script src="/js/analytics.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -37,7 +38,7 @@
       <p class="lead">Castlei is a private chess companion. Play the Stockfish engine at five levels, review your games, and drill tactics and opening lines. It works fully offline.</p>
       <p class="cta">
         <span class="pill">Coming soon to Google Play</span>
-        <a class="btn ghost" href="mailto:andwatiian@gmail.com?subject=Castlei%20early%20access">Ask for early access</a>
+        <a class="btn ghost" data-event="early_access_click" href="mailto:andwatiian@gmail.com?subject=Castlei%20early%20access">Ask for early access</a>
       </p>
       <ul class="ticks">
         <li>No account needed</li>
@@ -114,7 +115,7 @@
       </div>
       <div>
         <p class="label">Legal</p>
-        <p><a href="/privacy">Privacy policy</a><br><a href="/terms">Terms of use</a><br><a href="/delete-account">Delete your account</a></p>
+        <p><a href="/privacy">Privacy policy</a><br><a href="/terms">Terms of use</a><br><a href="/delete-account">Delete your account</a><br><button type="button" class="linklike" id="analytics-settings">Analytics settings</button></p>
       </div>
       <div>
         <p class="label">Contact</p>

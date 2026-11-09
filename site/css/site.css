@@ -91,3 +91,11 @@ header nav a:hover,header nav a[aria-current]{color:var(--teal);text-decoration:
 @media (max-width:640px){.foot-grid{grid-template-columns:1fr}}
 .foot p{margin:0 0 10px}
 .foot .fine{margin-top:28px}
+.linklike{background:none;border:0;padding:0;font:inherit;color:var(--teal);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:20;max-width:640px;margin-inline:auto;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+.consent p{margin:0 0 12px;font-size:.95rem}
+.consent .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.consent button{font:inherit;font-weight:700;padding:10px 20px;border-radius:999px;border:2px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer}
+.consent button:hover{background:color-mix(in srgb,var(--teal) 14%,transparent)}
+.consent button.primary{background:var(--teal);color:var(--bg)}
+@media (prefers-color-scheme: dark){.consent button.primary{color:#00201c}}
