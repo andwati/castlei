@@ -14,6 +14,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent / "site"
 NAME = "Castlei"
 OPERATOR = "Ian Andwati"
 EMAIL = "andwatiian@gmail.com"
+EARLY_ACCESS_URL = "https://forms.gle/X23kc6s6s9cLGn6L8"  # Google Form collecting tester emails for Play closed testing
 DOMAIN = "castlei.andwati.com"
 EFFECTIVE = "November 9, 2026"
 YEAR = "2026"
@@ -131,7 +132,7 @@ INDEX = page(
       <p class="lead">{NAME} is a private chess companion. Play the Stockfish engine at five levels, review your games, and drill tactics and opening lines. It works fully offline.</p>
       <p class="cta">
         <span class="pill">Coming soon to Google Play</span>
-        <a class="btn ghost" data-event="early_access_click" href="mailto:{EMAIL}?subject={NAME}%20early%20access">Ask for early access</a>
+        <a class="btn ghost" data-event="early_access_click" href="{EARLY_ACCESS_URL}" target="_blank" rel="noopener">Request early access</a>
       </p>
       <ul class="ticks">
         <li>No account needed</li>
