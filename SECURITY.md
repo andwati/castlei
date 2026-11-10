@@ -3,7 +3,7 @@
 Please report vulnerabilities privately, not in public issues.
 
 - Use GitHub's "Report a vulnerability" (Security → Advisories) on this repository, or
-- email andwatiian@gmail.com with "Castlei security" in the subject.
+- email ianiumlabs@gmail.com with "Castlei security" in the subject.
 
 Include what you found, how to reproduce it, and the version (Settings → About). You will get an acknowledgement within a few days. Please allow reasonable time for a fix before disclosing. We support the latest released version.
 

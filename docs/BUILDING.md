@@ -3,7 +3,7 @@
 Castlei builds and runs **without any Firebase project**. In that mode sign-in, cloud backup, crash reports, analytics, push and Remote Config are simply unavailable; everything else works.
 
 ## Requirements
-Flutter (version in the `FLUTTER_VERSION` default of `.github/workflows/ci.yml`), a JDK 17, Android SDK with NDK 28.2 and CMake, Python 3, and about 6 GB free for the engine and build output.
+Flutter (version in the `FLUTTER_VERSION` default of `.github/disabled-workflows/ci.yml`), a JDK 17, Android SDK with NDK 28.2 and CMake, Python 3, and about 6 GB free for the engine and build output.
 
 ## First build
 ```

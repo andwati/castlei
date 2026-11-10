@@ -13,7 +13,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent / "site"
 
 NAME = "Castlei"
 OPERATOR = "Ian Andwati"
-EMAIL = "andwatiian@gmail.com"
+EMAIL = "ianiumlabs@gmail.com"
 EARLY_ACCESS_URL = "https://forms.gle/X23kc6s6s9cLGn6L8"  # Google Form collecting tester emails for Play closed testing
 DOMAIN = "castlei.andwati.com"
 EFFECTIVE = "November 9, 2026"
@@ -235,6 +235,7 @@ PRIVACY = legal(
 <p>This information is not linked to the content of your games and we do not use it to identify you. Crashlytics data is kept for 90 days; the other services keep data for the standard periods set by Firebase, after which it is deleted automatically.</p>"""),
         ("website", "This website", f"""<p>When you visit this website we do not set analytics cookies unless you choose <em>Accept</em> in the banner. If you accept, we use <strong>Google Analytics</strong> (through Firebase) to count visits and see which pages and links are used. It records the pages you view and the links you click, your approximate location (country or city, derived from your IP address, which is not stored), the browser, device and language, and how you arrived (for example from a search or another site). It sets two cookies, <code>_ga</code> and <code>_ga_*</code>, which last up to 13 months and contain a random identifier. We do not use Google Signals, advertising features or ad personalisation, and we do not combine this data with the {NAME} app or with anything that identifies you.</p>
 <p>If you decline, or your browser sends a Global Privacy Control or Do Not Track signal, no analytics script is loaded. You can change your choice at any time with <em>Analytics settings</em> in the footer of every page. Declining or withdrawing deletes the analytics cookies it set. The legal basis is your consent. Like any web host, Firebase Hosting keeps standard server logs (such as IP address and requested page) for security and operation.</p>"""),
+        ("early", "Early-access sign-up", f"""<p>The <em>Request early access</em> button opens a Google Form. If you fill it in, we receive the email address you enter (and anything else the form asks for) and use it only to invite you to test {NAME} on Google Play and to contact you about that test. The form is run by Google under its own privacy policy. We keep the list until the test ends, then delete it. To be removed sooner, write to <a href="mailto:{EMAIL}">{EMAIL}</a>.</p>"""),
         ("share", "Diagnostics reports you choose to send", f"""<p><em>Settings &rarr; Privacy and diagnostics &rarr; Diagnostics</em> shows a snapshot of what {NAME} knows on your device: app and operating system versions, which switches are on, counts of games and drills, and a short list of recent scrubbed events. It contains no games, positions, comments, titles, names, email address or file names. Nothing is sent unless you tap <em>Send diagnostics</em> and choose where to share it, for example by email to us.</p>"""),
         ("purchases", f"Purchases ({NAME} Plus)", f"""<p>When {NAME} Plus becomes available, the purchase is handled by Google Play. Google processes your payment and we do not receive your card or payment details. The app will receive confirmation of whether the purchase is active on your Google account so it can unlock the feature.</p>"""),
         ("use", "How we use data and why", """<ul>
