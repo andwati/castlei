@@ -14,6 +14,10 @@ on:
         description: Publish a GitHub Release for the chosen ref (needs a v* tag ref)
         type: boolean
         default: false
+      play_track:
+        description: Google Play track for this run (blank = the PLAY_TRACK variable, default alpha = closed testing)
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -37,6 +41,11 @@ env:
   # SHA-256 of the Castlei release signing certificate (public). The build fails if
   # the APKs are signed with anything else, for example the debug-key fallback.
   RELEASE_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 || 'f285ee48cf321d2438b15aa9add26b319f6911de35cae05f6c4a74bd57a00d6a' }}
+  # Google Play. Closed testing is the track named "alpha"; use "production" once Play grants access.
+  # Status must stay "draft" until the app has been published once; then "completed" (or "inProgress" with PLAY_USER_FRACTION).
+  PLAY_TRACK: ${{ inputs.play_track || vars.PLAY_TRACK || 'alpha' }}
+  PLAY_RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'draft' }}
+  PLAY_USER_FRACTION: ${{ vars.PLAY_USER_FRACTION }}
   FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
   FIREBASE_TEST_GROUP: ${{ vars.FIREBASE_TEST_GROUP || 'owner' }}
 
@@ -47,6 +56,8 @@ jobs:
     env:
       # Set to 'true' when the optional FIREBASE_SERVICE_ACCOUNT secret exists.
       HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+      # Set to 'true' when the optional PLAY_SERVICE_ACCOUNT_JSON secret exists.
+      HAS_PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -146,6 +157,21 @@ jobs:
             fi
           done
 
+      - name: Build the signed Android App Bundle for Google Play
+        # Also on manual runs, so the first bundle can be downloaded and uploaded by hand.
+        if: env.HAS_PLAY == 'true' || github.event_name == 'workflow_dispatch'
+        run: ./tool/retry.sh 3 60 flutter build appbundle --release --target-platform ${{ env.ANDROID_TARGET_PLATFORMS }} --dart-define-from-file=firebase.env.json
+
+      - name: Verify the bundle is signed with the upload key
+        if: env.HAS_PLAY == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          got=$(keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep -m1 'SHA256:' | awk '{print $NF}' | tr -d ':' | tr 'A-F' 'a-f')
+          echo "app-release.aab -> $got"
+          if [ "$got" != "$RELEASE_CERT_SHA256" ]; then
+            echo "::error::The bundle is not signed with the Castlei upload key"
+            exit 1
+          fi
+
       - name: Collect release files
         run: |
           mkdir dist
@@ -158,6 +184,15 @@ jobs:
         with:
           name: castlei-${{ steps.version.outputs.tag }}
           path: dist/*
+          if-no-files-found: error
+
+      - name: Keep the App Bundle as a private workflow artifact (not attached to the public Release)
+        if: env.HAS_PLAY == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: castlei-${{ steps.version.outputs.tag }}-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
           if-no-files-found: error
 
       - name: Publish the GitHub Release
@@ -181,6 +216,19 @@ jobs:
           EOF
           gh release create "$tag" dist/* --verify-tag --title "Castlei $name" \
             --notes-file /tmp/notes.md --generate-notes "${flags[@]}"
+
+      - name: Upload to Google Play
+        if: github.ref_type == 'tag' && (github.event_name == 'push' || inputs.publish) && env.HAS_PLAY == 'true' && !contains(steps.version.outputs.tag, '-')
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.andwati.castlei
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: ${{ env.PLAY_TRACK }}
+          status: ${{ env.PLAY_RELEASE_STATUS }}
+          userFraction: ${{ env.PLAY_USER_FRACTION }}
+          whatsNewDirectory: play/whatsnew
+          inAppUpdatePriority: 0
 
       - name: Deliver to testers with Firebase App Distribution (optional)
         if: github.ref_type == 'tag' && (github.event_name == 'push' || inputs.publish) && env.HAS_FIREBASE == 'true'
