@@ -2,7 +2,7 @@
 
 A private chess companion for Android (iOS prepared). Play the Stockfish engine on your phone, analyse and review games with an evaluation graph, drill tactics and openings, follow 24 guided lessons, train board coordinates, and track your progress on the device. An account, cloud backup, crash reports and analytics are all optional.
 
-<a href="https://play.google.com/store/apps/details?id=com.andwati.castlei"><img src="docs/google-play-badge.png" alt="Get it on Google Play" height="64"></a>
+<a href="https://play.google.com/store/apps/details?id=com.andwati.castlei"><img src="docs/google-play-badge.png" alt="Get it on Google Play" height="48"></a>
 
 Website: https://castlei.andwati.com. Licensed under the GNU GPL v3.0 (see `LICENSE`); third-party notices are in the app (Settings → Open-source software) and in `NOTICE.md`.
 
