@@ -132,6 +132,7 @@ INDEX = page(
       <p class="lead">{NAME} is a private chess companion. Play the Stockfish engine at five levels, review your games, and drill tactics and opening lines. It works fully offline.</p>
       <p class="cta">
         <a class="play-badge" data-event="play_store_click" href="{PLAY_URL}" target="_blank" rel="noopener"><img src="/img/google-play-badge.png" width="646" height="250" alt="Get it on Google Play"></a>
+        <span class="store-soon" role="img" aria-label="App Store version coming soon" title="Coming soon"><small>Coming soon on the</small><strong>App Store</strong></span>
       </p>
       <ul class="ticks">
         <li>No account needed</li>
@@ -381,6 +382,9 @@ header nav a:hover,header nav a[aria-current]{color:var(--teal);text-decoration:
 .pill{background:var(--coral);color:var(--coral-ink);font-weight:700;padding:13px 22px;border-radius:999px}
 .play-badge{display:inline-block;line-height:0}
 .play-badge img{display:block;height:48px;width:auto}
+.store-soon{display:inline-flex;flex-direction:column;justify-content:center;height:34px;min-width:112px;padding:0 14px;margin-left:6px;border-radius:7px;border:1px solid #8a8a8a;background:#4a4a4a;color:#d0d0d0;line-height:1.1;opacity:.55;cursor:not-allowed;user-select:none;position:relative;vertical-align:top}
+.store-soon small{font-size:9px}
+.store-soon strong{font-size:15px;font-weight:600}
 .btn{display:inline-block;padding:12px 20px;border-radius:999px;font-weight:700;text-decoration:none}
 .btn.ghost{border:2px solid color-mix(in srgb,var(--pine-ink) 55%,transparent)}
 .btn.ghost:hover{background:color-mix(in srgb,var(--pine-ink) 12%,transparent)}
