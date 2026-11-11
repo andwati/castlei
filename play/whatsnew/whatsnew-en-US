@@ -1,6 +1,5 @@
-Guided lessons, coordinate training and progress insights.
-- 24 offline lessons with exercises and hints
-- Coordinate training with 30-second challenges
-- Results by opening, colour and difficulty
-- Illustrated opponents for each Stockfish level
-- Clearer turn cues, clocks and responsive layouts
+Send feedback, fixes and automatic data restore.
+- New: Settings > Send feedback for bugs and ideas, with screenshots
+- Send diagnostics straight to the developer
+- Fixed Google sign-in on Play installs
+- Your games and progress can now restore after reinstalling or on a new phone
