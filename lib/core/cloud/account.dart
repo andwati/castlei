@@ -18,7 +18,14 @@ class AccountService extends ChangeNotifier {
 
   bool available = false;
   bool _googleReady = false;
-  User? get user => available ? FirebaseAuth.instance.currentUser : null;
+  // Anonymous users (created silently so feedback can be submitted) are not
+  // "signed in": backup and account UI only apply to real accounts.
+  User? get user {
+    if (!available) return null;
+    final u = FirebaseAuth.instance.currentUser;
+    return (u == null || u.isAnonymous) ? null : u;
+  }
+
   bool get signedIn => user != null;
   // Hidden until the Apple Developer account and Apple devices exist; flip the
   // Remote Config parameter `apple_sign_in_enabled` to show it again.

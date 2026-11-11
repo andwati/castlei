@@ -15,6 +15,7 @@ import '../../core/storage/repository.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 import 'diagnostics_screen.dart';
+import 'feedback_screen.dart';
 import 'notification_settings.dart';
 import 'open_source_screen.dart';
 import 'preferences_screen.dart';
@@ -96,14 +97,18 @@ class _SettingsState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
-  Future<void> _run(Future<String?> Function() action, {String? ok}) async {
+  Future<void> _run(
+    Future<String?> Function() action, {
+    String? ok,
+    bool Function()? okIf,
+  }) async {
     setState(() => busy = true);
     final problem = await action();
     if (!mounted) return;
     setState(() => busy = false);
     if (problem != null) {
       _snack(problem);
-    } else if (ok != null) {
+    } else if (ok != null && (okIf?.call() ?? true)) {
       _snack(ok);
     }
   }
@@ -313,7 +318,11 @@ class _SettingsState extends State<SettingsScreen> {
               FilledButton.icon(
                 onPressed: busy
                     ? null
-                    : () => _run(account.signInWithGoogle, ok: 'Signed in'),
+                    : () => _run(
+                        account.signInWithGoogle,
+                        ok: 'Signed in',
+                        okIf: () => account.signedIn,
+                      ),
                 icon: const Icon(Icons.login_rounded),
                 label: const Text('Continue with Google'),
               ),
@@ -322,7 +331,11 @@ class _SettingsState extends State<SettingsScreen> {
                 OutlinedButton.icon(
                   onPressed: busy
                       ? null
-                      : () => _run(account.signInWithApple, ok: 'Signed in'),
+                      : () => _run(
+                          account.signInWithApple,
+                          ok: 'Signed in',
+                          okIf: () => account.signedIn,
+                        ),
                   icon: const Icon(Icons.apple),
                   label: const Text('Continue with Apple'),
                 ),
@@ -531,6 +544,20 @@ class _SettingsState extends State<SettingsScreen> {
                 await Analytics.setEnabled(v);
                 _load();
               },
+            ),
+            ListTile(
+              leading: const Icon(Icons.rate_review_outlined),
+              title: const Text('Send feedback'),
+              subtitle: const Text(
+                'Report a bug or suggest a feature, with screenshots.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FeedbackScreen(repo: widget.repo),
+                ),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.fact_check_outlined),

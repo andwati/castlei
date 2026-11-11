@@ -13,6 +13,9 @@
     <application
         android:label="Castlei"
         android:name="${applicationName}"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher">
         <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="true"/>

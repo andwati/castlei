@@ -99,10 +99,10 @@ void main() {
     final db = AppDatabase.memory();
     await t.pumpWidget(host(DiagnosticsScreen(repo: Repository(db))));
     await t.pumpAndSettle();
-    expect(find.text('Send diagnostics'), findsOneWidget);
+    expect(find.text('Send to developer'), findsOneWidget);
     expect(find.textContaining('Castlei diagnostics snapshot'), findsOneWidget);
     expect(
-      find.textContaining('Nothing is sent unless you share it'),
+      find.textContaining('Nothing is sent unless you tap Send to developer or share it'),
       findsOneWidget,
     );
     expect(find.text('Send a test crash report'), findsNothing);

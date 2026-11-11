@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/cloud/feedback.dart';
 import '../../core/diagnostics/analytics.dart';
 import '../../core/diagnostics/log.dart';
 import '../../core/diagnostics/snapshot.dart';
@@ -21,6 +22,7 @@ class DiagnosticsScreen extends StatefulWidget {
 class _DiagnosticsState extends State<DiagnosticsScreen> {
   String? report;
   String? error;
+  bool sending = false;
 
   @override
   void initState() {
@@ -38,6 +40,21 @@ class _DiagnosticsState extends State<DiagnosticsScreen> {
     }
   }
 
+  Future<void> _sendToDeveloper() async {
+    final text = report;
+    if (text == null) return;
+    setState(() => sending = true);
+    final problem = await FeedbackService.submit(
+      type: FeedbackType.diagnostics,
+      message: 'Diagnostics report',
+      diagnostics: text,
+    );
+    if (!mounted) return;
+    setState(() => sending = false);
+    if (problem == null) Analytics.log('diagnostics_sent');
+    _snack(problem ?? 'Diagnostics sent. Thank you!');
+  }
+
   void _snack(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
@@ -49,7 +66,7 @@ class _DiagnosticsState extends State<DiagnosticsScreen> {
       padding: pagePadding(context),
       children: [
         const FeedbackCard(
-          'This is a snapshot of what Castlei knows on this device: versions, settings, counts and recent events. It has no games, positions, comments, names, e-mail address or file names. Nothing is sent unless you share it.',
+          'This is a snapshot of what Castlei knows on this device: versions, settings, counts and recent events. It has no games, positions, comments, names, e-mail address or file names. Nothing is sent unless you tap Send to developer or share it. What you see below is exactly what is sent.',
           tone: Tone.info,
           icon: Icons.privacy_tip_outlined,
         ),
@@ -58,20 +75,32 @@ class _DiagnosticsState extends State<DiagnosticsScreen> {
           children: [
             Expanded(
               child: FilledButton.icon(
-                onPressed: report == null
-                    ? null
-                    : () {
-                        Analytics.log('diagnostics_shared');
-                        SharePlus.instance.share(
-                          ShareParams(
-                            text: report!,
-                            subject: 'Castlei diagnostics',
-                          ),
-                        );
-                      },
-                icon: const Icon(Icons.ios_share),
-                label: const Text('Send diagnostics'),
+                onPressed: report == null || sending ? null : _sendToDeveloper,
+                icon: sending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send_rounded),
+                label: const Text('Send to developer'),
               ),
+            ),
+            const SizedBox(width: 12),
+            IconButton.filledTonal(
+              tooltip: 'Share report',
+              onPressed: report == null
+                  ? null
+                  : () {
+                      Analytics.log('diagnostics_shared');
+                      SharePlus.instance.share(
+                        ShareParams(
+                          text: report!,
+                          subject: 'Castlei diagnostics',
+                        ),
+                      );
+                    },
+              icon: const Icon(Icons.ios_share),
             ),
             const SizedBox(width: 12),
             IconButton.filledTonal(

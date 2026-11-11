@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.andwati.castlei",
+      "sha256_cert_fingerprints": [
+        "0D:9B:39:34:30:88:1D:9F:6D:03:EE:5A:54:28:8F:8E:AE:8D:4A:74:91:CC:3A:C4:11:33:62:68:7B:56:75:3F"
+      ]
+    }
+  }
+]

@@ -58,3 +58,6 @@ android/app/google-services.json
 firebase.env.json
 ios/Runner/GoogleService-Info.plist
 .firebaserc
+
+# Exported user feedback (contains emails and diagnostics)
+feedback-export/

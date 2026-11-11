@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../diagnostics/analytics.dart';
@@ -86,7 +85,7 @@ class CloudBackup {
   static final changed = ValueNotifier<int>(0);
 
   static CollectionReference<Map<String, dynamic>>? get _backups {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = AccountService.instance.user?.uid;
     return uid == null
         ? null
         : FirebaseFirestore.instance.collection('users/$uid/backups');

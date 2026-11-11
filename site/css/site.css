@@ -48,6 +48,8 @@ header nav a:hover,header nav a[aria-current]{color:var(--teal);text-decoration:
 @media (max-width:820px){.hero-grid{grid-template-columns:1fr;padding:44px 0 70px}.hero-art{order:-1}.hero-art .phone{max-width:260px;margin-inline:auto}}
 .cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:26px 0 18px}
 .pill{background:var(--coral);color:var(--coral-ink);font-weight:700;padding:13px 22px;border-radius:999px}
+.play-badge{display:inline-block;line-height:0}
+.play-badge img{display:block;height:64px;width:auto}
 .btn{display:inline-block;padding:12px 20px;border-radius:999px;font-weight:700;text-decoration:none}
 .btn.ghost{border:2px solid color-mix(in srgb,var(--pine-ink) 55%,transparent)}
 .btn.ghost:hover{background:color-mix(in srgb,var(--pine-ink) 12%,transparent)}

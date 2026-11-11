@@ -17,6 +17,33 @@ service cloud.firestore {
                               && request.resource.data.data.size() <= 800 * 1024;
       }
     }
+    // Feedback: create-only for any (including anonymous) signed-in client;
+    // nobody can read it from the app. Screenshots are chunks (one JPEG each).
+    match /feedback/{id} {
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasOnly(
+                         ['type', 'message', 'email', 'app', 'build', 'os',
+                          'locale', 'uid', 'created', 'images', 'diagnostics'])
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.type in ['bug', 'idea', 'other', 'diagnostics']
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() <= 4000
+                    && request.resource.data.email is string
+                    && request.resource.data.email.size() <= 200
+                    && request.resource.data.diagnostics is string
+                    && request.resource.data.diagnostics.size() <= 20000
+                    && request.resource.data.images is int
+                    && request.resource.data.images >= 0
+                    && request.resource.data.images <= 3;
+      match /chunks/{chunkId} {
+        allow create: if request.auth != null
+                      && chunkId in ['0', '1', '2']
+                      && get(/databases/$(database)/documents/feedback/$(id)).data.uid == request.auth.uid
+                      && request.resource.data.keys().hasOnly(['i', 'data'])
+                      && request.resource.data.data.size() <= 800 * 1024;
+      }
+    }
     match /{document=**} {
       allow read, write: if false;
     }
