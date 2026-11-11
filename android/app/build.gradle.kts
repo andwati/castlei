@@ -17,6 +17,8 @@ val keyProps = Properties().apply {
 }
 
 android {
+    // Libraries ship 32-bit helper libs, but the app itself has no 32-bit build.
+    packaging { jniLibs { excludes += "**/armeabi-v7a/**" } }
     namespace = "com.andwati.castlei"
     compileSdk = 37
     ndkVersion = "28.2.13676358"
@@ -33,6 +35,9 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 29
+        // 64-bit only: Flutter's engine and app code are built for arm64 and x86_64, so
+        // 32-bit-only phones must not be offered the app (they would crash on launch).
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         externalNativeBuild { cmake { cppFlags += "-std=c++17"; arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"; if (System.getenv("CASTLEI_CCACHE") != null) arguments += listOf("-DCMAKE_C_COMPILER_LAUNCHER=ccache", "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache") } }
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
