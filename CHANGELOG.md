@@ -4,6 +4,15 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.6 — 2026-11-12
+
+Clearer progress and puzzle feedback.
+
+- Puzzle feedback now sits above the board, like lessons.
+- Training trends use plain wording, show an arrow for improving, steady or slipping, and say so when there is nothing yet.
+
+Android build 14 (1.1.6+14).
+
 ## 1.1.5 — 2026-11-12
 
 Works on more phones, and easier to see.

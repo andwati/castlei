@@ -359,8 +359,34 @@ class _StatsState extends State<StatisticsScreen> {
                           .toList();
                       final first = rows.take(rows.length ~/ 2).toList();
                       final recent = rows.skip(rows.length ~/ 2).toList();
+                      Widget? trend(String kind, List first, List recent) {
+                        if (kind == 'coordinate' ||
+                            first.length < 2 ||
+                            recent.length < 2) {
+                          return null;
+                        }
+                        double rate(List rows) =>
+                            rows.where((a) => a['success'] == 1).length /
+                            rows.length;
+                        final d = rate(recent) - rate(first);
+                        final up = d > .05, down = d < -.05;
+                        return Icon(
+                          up
+                              ? Icons.trending_up_rounded
+                              : down
+                              ? Icons.trending_down_rounded
+                              : Icons.trending_flat_rounded,
+                          semanticLabel: up
+                              ? 'Improving'
+                              : down
+                              ? 'Slipping'
+                              : 'Steady',
+                          color: up ? context.tokens.good : null,
+                        );
+                      }
+
                       String summary(List rows) {
-                        if (rows.isEmpty) return '—';
+                        if (rows.isEmpty) return 'no data yet';
                         if (kind == 'coordinate') {
                           var correct = 0, count = 0;
                           for (final row in rows) {
@@ -378,7 +404,7 @@ class _StatsState extends State<StatisticsScreen> {
                           (sum, a) => sum + (a['duration'] as int),
                         );
                         final helped = rows.where((a) => a['hints'] > 0).length;
-                        return '$solved/${rows.length} unaided · ${(ms / rows.length / 1000).toStringAsFixed(1)}s avg · $helped with hints';
+                        return '$solved of ${rows.length} solved without help · ${(ms / rows.length / 1000).toStringAsFixed(1)} s each${helped > 0 ? ' · $helped with hints' : ''}';
                       }
 
                       return Card(
@@ -391,8 +417,13 @@ class _StatsState extends State<StatisticsScreen> {
                               'coordinate': 'Coordinates',
                             }[kind]!,
                           ),
+                          trailing: trend(kind, first, recent),
                           subtitle: Text(
-                            'Earlier: ${summary(first)}\nRecent: ${summary(recent)}',
+                            rows.isEmpty
+                                ? 'Nothing yet. Tap to start.'
+                                : rows.length < 4
+                                ? 'So far: ${summary(rows)}'
+                                : 'Earlier: ${summary(first)}\nRecent: ${summary(recent)}',
                           ),
                           onTap:
                               kind == 'opening' &&

@@ -358,6 +358,22 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
+                FeedbackCard(
+                  message,
+                  tone: failed && !complete
+                      ? Tone.bad
+                      : complete
+                      ? (failed || hints > 0 ? Tone.info : Tone.good)
+                      : Tone.neutral,
+                  icon: complete
+                      ? (failed || hints > 0
+                            ? Icons.school_outlined
+                            : Icons.emoji_events_outlined)
+                      : failed
+                      ? Icons.refresh_rounded
+                      : Icons.touch_app_outlined,
+                ),
+                const SizedBox(height: 8),
                 TurnCue(
                   position: position!,
                   detail:
@@ -391,22 +407,6 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                       : hints > 1 && !complete
                       ? solution[opening ? 0 : ply]
                       : null,
-                ),
-                const SizedBox(height: 16),
-                FeedbackCard(
-                  message,
-                  tone: failed && !complete
-                      ? Tone.bad
-                      : complete
-                      ? (failed || hints > 0 ? Tone.info : Tone.good)
-                      : Tone.neutral,
-                  icon: complete
-                      ? (failed || hints > 0
-                            ? Icons.school_outlined
-                            : Icons.emoji_events_outlined)
-                      : failed
-                      ? Icons.refresh_rounded
-                      : Icons.touch_app_outlined,
                 ),
                 const SizedBox(height: 12),
                 if (!complete)
