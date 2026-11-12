@@ -10,10 +10,15 @@ The Android release key lives at `android/castlei-release.jks` with its password
 - Without `key.properties` a release build silently falls back to the debug key; always check the fingerprint below.
 
 ## Building for Google Play
+0. Add the release's notes to `CHANGELOG.md` (newest first) and copy them into `play/whatsnew/whatsnew-en-US`.
 1. Set the version in `pubspec.yaml` (`version: 1.1.0+5`: the name, then an increasing build number). **Every upload needs a build number higher than any used before**, in any track. Bundles use the plain number (no ABI offset).
-2. Build:
+2. Build with the script, which runs the command below and stops if `firebase.env.json` or `key.properties` is missing. **Never run a bare `flutter build appbundle --release`**: without `--dart-define-from-file=firebase.env.json` the app ships with accounts, backup, feedback and analytics switched off ("Accounts are not available in this build"), and without `--target-platform` it bundles every ABI.
    ```
    ./tool/fetch_engine.sh   # once
+   ./tool/build_release.sh
+   ```
+   which is equivalent to:
+   ```
    flutter build appbundle --release --target-platform android-arm64,android-x64 --dart-define-from-file=firebase.env.json
    ```
    Output: `build/app/outputs/bundle/release/app-release.aab` (about 500 MB, mostly native debug symbols; users download about 100 MB).

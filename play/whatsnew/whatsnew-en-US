@@ -1,5 +1,7 @@
-Send feedback, fixes and automatic data restore.
-- New: Settings > Send feedback for bugs and ideas, with screenshots
-- Send diagnostics straight to the developer
-- Fixed Google sign-in on Play installs
-- Your games and progress can now restore after reinstalling or on a new phone
+A calmer game screen and smarter updates.
+- Cleaner game screen: the board comes first, with captures, turn and clocks on the player bars
+- Your game's moves in a one-line strip; tap it to see them all
+- Review is now the main button when a game ends
+- Fairer game reviews: fewer moves wrongly marked uncertain
+- Reminders are only offered after you finish a game or puzzle, with an explanation first
+- Castlei can now offer you an update through Google Play
