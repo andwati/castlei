@@ -1,3 +1,5 @@
+import '../../core/ui/plural.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../core/chess/model.dart';
@@ -39,7 +41,7 @@ class PlayerBar extends StatelessWidget {
       container: true,
       label:
           '$name${active ? ', to move' : ''}${inCheck ? ', in check' : ''}'
-          '${captures.taken.isEmpty ? '' : ', has captured ${captures.taken.length} pieces'}'
+          '${captures.taken.isEmpty ? '' : ', has captured ${plural(captures.taken.length, 'piece')}'}'
           '${captures.lead > 0 ? ', ahead by ${captures.lead}' : ''}',
       child: ExcludeSemantics(
         child: ConstrainedBox(

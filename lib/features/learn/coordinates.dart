@@ -1,3 +1,5 @@
+import '../../core/ui/plural.dart';
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -264,7 +266,7 @@ class _CoordinateState extends State<CoordinateScreen>
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 Text(
-                  '${black ? 'Black' : 'White'} view · $correct correct / $attempts attempts${timed ? ' · ${((30000 - watch.elapsedMilliseconds).clamp(0, 30000) / 1000).ceil()}s left' : ''}',
+                  '${black ? 'Black' : 'White'} view · $correct correct / ${plural(attempts, 'attempt')}${timed ? ' · ${((30000 - watch.elapsedMilliseconds).clamp(0, 30000) / 1000).ceil()}s left' : ''}',
                 ),
                 if (timed)
                   Padding(

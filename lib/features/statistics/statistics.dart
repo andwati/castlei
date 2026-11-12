@@ -1,3 +1,5 @@
+import '../../core/ui/plural.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -456,7 +458,7 @@ class _StatsState extends State<StatisticsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${t.key}${t.value[0] < 5 ? ' · Keep training' : ''}',
+                                  '${humanize(t.key)}${t.value[0] < 5 ? ' · Keep training' : ''}',
                                   style: context.text.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -496,10 +498,11 @@ class _StatsState extends State<StatisticsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Strongest theme: ${ranked.last.key} · ${ranked.last.value[1]} / ${ranked.last.value[0]} unaided',
+                            'Strongest theme: ${humanize(ranked.last.key)} · ${ranked.last.value[1]} / ${ranked.last.value[0]} unaided',
                           ),
                           ActionTile(
-                            title: 'Practice ${ranked.first.key}',
+                            title:
+                                'Practice ${humanize(ranked.first.key).toLowerCase()}',
                             subtitle:
                                 '${ranked.first.value[1]} of ${ranked.first.value[0]} solved unaided · Your lowest theme success rate',
                             icon: Icons.extension_outlined,
@@ -520,7 +523,7 @@ class _StatsState extends State<StatisticsScreen> {
                 ],
                 if ((cards['due'] ?? 0) > 0)
                   Text(
-                    '${cards['due']} repertoire cards are due. Open Learn → Opening repertoires to review.',
+                    '${plural(cards['due'] as int, 'repertoire card')} ${cards['due'] == 1 ? 'is' : 'are'} due. Open Learn → Opening repertoires to review.',
                   ),
                 if (attempts.isNotEmpty || games.isNotEmpty)
                   Padding(

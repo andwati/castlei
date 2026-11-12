@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/ui/plural.dart';
+
 import '../../core/diagnostics/analytics.dart';
 import '../../core/notifications/notifications.dart';
 import '../../core/ui/board.dart';
@@ -126,7 +128,7 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
       rows = [...due, ...fresh];
     } else {
       rows = await db.rows(
-        "SELECT * FROM puzzles WHERE rating<=? AND themes LIKE ? ORDER BY (SELECT count(*) FROM attempts WHERE target=puzzles.id),id LIMIT 100",
+        "SELECT * FROM puzzles WHERE rating<=? AND themes LIKE ? ORDER BY (SELECT count(*) FROM attempts WHERE target=puzzles.id),id LIMIT 20",
         [rating, '%$theme%'],
       );
     }
@@ -298,12 +300,14 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                         ])
                           PopupMenuItem(
                             value: t,
-                            child: Text(t.isEmpty ? 'All themes' : t),
+                            child: Text(t.isEmpty ? 'All themes' : humanize(t)),
                           ),
                       ],
                       child: Chip(
                         avatar: const Icon(Icons.category_outlined, size: 18),
-                        label: Text(theme.isEmpty ? 'All themes' : theme),
+                        label: Text(
+                          theme.isEmpty ? 'All themes' : humanize(theme),
+                        ),
                       ),
                     ),
                   ],
@@ -478,10 +482,24 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                     label: const Text('Next position'),
                   ),
                 if (complete && index + 1 >= items.length)
-                  FeedbackCard(
-                    'Session complete — nice work.',
-                    tone: Tone.good,
-                    icon: Icons.celebration_outlined,
+                  Column(
+                    spacing: 12,
+                    children: [
+                      FeedbackCard(
+                        'Set complete. Nice work.',
+                        tone: Tone.good,
+                        icon: Icons.celebration_outlined,
+                      ),
+                      if (!opening)
+                        FilledButton.icon(
+                          onPressed: () {
+                            setState(() => loading = true);
+                            load();
+                          },
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Another set'),
+                        ),
+                    ],
                   ),
               ],
             ],

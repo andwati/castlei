@@ -1,3 +1,5 @@
+import '../../core/ui/plural.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../core/storage/repository.dart';
@@ -70,7 +72,7 @@ class _InsightsViewState extends State<InsightsView> {
           child: ListTile(
             title: Text(entry.key),
             subtitle: Text(
-              '${entry.value.gameIds.length} games · ${entry.value.wins} won · ${entry.value.draws} drawn · ${entry.value.losses} lost',
+              '${plural(entry.value.gameIds.length, 'game')} · ${entry.value.wins} won · ${entry.value.draws} drawn · ${entry.value.losses} lost',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => showGames(data, entry.value.gameIds, entry.key),
@@ -139,7 +141,7 @@ class _InsightsViewState extends State<InsightsView> {
               ),
             const SectionLabel('Your reviewed moves'),
             Text(
-              '${review.reviewedGames} of ${review.totalGames} games have reviewed human moves · ${review.reviewedMoves} of ${review.humanMoves} human moves reviewed',
+              '${review.reviewedGames} of ${plural(review.totalGames, 'game')} reviewed · ${review.reviewedMoves} of ${plural(review.humanMoves, 'move')} checked',
             ),
             const Text(
               'Counts reflect available reviews. Unreviewed moves are not treated as good moves.',
@@ -158,7 +160,7 @@ class _InsightsViewState extends State<InsightsView> {
                   subtitle: Text(
                     review.reviewedMoves == 0
                         ? 'No reviewed moves yet'
-                        : '${review.labels[label] ?? 0} moves · ${((review.labels[label] ?? 0) * 100 / review.reviewedMoves).toStringAsFixed(1)}% of reviewed human moves',
+                        : '${plural(review.labels[label] ?? 0, 'move')} · ${((review.labels[label] ?? 0) * 100 / review.reviewedMoves).toStringAsFixed(1)}% of reviewed human moves',
                   ),
                   onTap: (review.labelGames[label] ?? []).isEmpty
                       ? null

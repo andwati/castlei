@@ -223,7 +223,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     quick.initialize((type) => _onNotificationTap(type));
     quick.setShortcutItems(const [
       ShortcutItem(type: 'resume', localizedTitle: 'Resume game'),
-      ShortcutItem(type: 'puzzle', localizedTitle: 'Daily tactics'),
+      ShortcutItem(type: 'puzzle', localizedTitle: 'Practice puzzles'),
     ]);
   }
 
@@ -725,8 +725,8 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 12),
             ActionTile(
-              title: 'Daily tactics',
-              subtitle: 'A fresh position to think through',
+              title: 'Practice puzzles',
+              subtitle: 'A short set of tactics, picked for you',
               icon: Icons.extension_rounded,
               accent: context.colors.secondary,
               onTap: () => Navigator.push(
@@ -960,18 +960,18 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                               runSpacing: 4,
                               children: [
                                 StatusChip(
-                                  row['result'] == '*'
-                                      ? 'In progress'
-                                      : '${row['result']}',
+                                  resultLabel(row),
                                   icon: row['result'] == '*'
-                                      ? Icons.pause_circle_outline
+                                      ? Icons.play_circle_outline
                                       : Icons.check_circle_outline,
-                                  color: row['result'] == '*'
-                                      ? context.colors.secondary
-                                      : context.colors.primary,
+                                  color: context.colors.primary,
                                 ),
                                 StatusChip(
-                                  '${row['source']}',
+                                  switch ('${row['source']}') {
+                                    'engine' => 'Vs Stockfish',
+                                    'study' => 'Study',
+                                    _ => 'Imported',
+                                  },
                                   icon: row['source'] == 'engine'
                                       ? Icons.memory
                                       : row['source'] == 'study'
@@ -1084,6 +1084,16 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                   onPressed: () => guard(() async {
                     final rows = await widget.repo.games();
                     if (!context.mounted) return;
+                    if (rows.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Your library is empty. Make a study on the analysis board or import a game first.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
                     final id = await showDialog<String>(
                       context: context,
                       builder: (c) => SimpleDialog(
@@ -1106,7 +1116,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                           for (final s in ['white', 'black'])
                             SimpleDialogOption(
                               onPressed: () => Navigator.pop(c, s),
-                              child: Text(s),
+                              child: Text(s == 'white' ? 'White' : 'Black'),
                             ),
                         ],
                       ),
@@ -1164,7 +1174,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                                 runSpacing: 4,
                                 children: [
                                   StatusChip(
-                                    'Train ${r['side']}',
+                                    'Train as ${r['side'] == 'white' ? 'White' : 'Black'}',
                                     icon: Icons.person_outline,
                                   ),
                                   StatusChip(
@@ -1339,4 +1349,21 @@ class _DialogLabel extends StatelessWidget {
       child: Text(text, style: Theme.of(context).textTheme.labelLarge),
     ),
   );
+}
+
+/// A library row's result in words: "You won" for games against Stockfish,
+/// "White won" for imported games, "Not finished" while a game is open.
+String resultLabel(Map<String, dynamic> row) {
+  final result = '${row['result']}';
+  if (result == '*') return row['source'] == 'study' ? 'Study' : 'Not finished';
+  if (result == '1/2-1/2') return 'Draw';
+  String? side;
+  try {
+    side = jsonDecode('${row['settings']}')['side'] as String?;
+  } catch (_) {}
+  if (row['source'] == 'engine' && side != null) {
+    final whiteWon = result == '1-0';
+    return whiteWon == (side == 'white') ? 'You won' : 'You lost';
+  }
+  return result == '1-0' ? 'White won' : 'Black won';
 }

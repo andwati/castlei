@@ -1,3 +1,5 @@
+import '../../core/ui/plural.dart';
+
 import 'dart:convert';
 
 import 'package:archive/archive.dart';
@@ -143,7 +145,7 @@ class _PackState extends State<PackScreen> {
           [pack['id'], jsonEncode(manifest)],
         );
       });
-      status = 'Installed ${rows.length} puzzles';
+      status = 'Installed ${plural(rows.length, 'puzzle')}';
       Perf.record(
         'pack_install',
         metrics: {
@@ -267,7 +269,7 @@ class _PackState extends State<PackScreen> {
                               runSpacing: 4,
                               children: [
                                 StatusChip(
-                                  '${p['count']} puzzles',
+                                  plural(p['count'] as int, 'puzzle'),
                                   icon: Icons.extension_outlined,
                                 ),
                                 StatusChip(
@@ -298,15 +300,19 @@ class _PackState extends State<PackScreen> {
                   ),
                 ),
               ),
-            if (installed.isNotEmpty) const SectionLabel('Installed'),
-            for (final p in installed.values)
+            if (installed.keys.any((id) => !packs.any((p) => p['id'] == id)))
+              const SectionLabel('Installed'),
+            for (final p in installed.values.where(
+              (p) => !packs.any((a) => a['id'] == p['id']),
+            ))
               Card(
                 child: ListTile(
                   leading: Icon(
                     Icons.inventory_2_outlined,
                     color: context.colors.primary,
                   ),
-                  title: Text('Installed: ${p['id']}'),
+                  title: Text(humanize('${p['id']}')),
+                  subtitle: const Text('On this device'),
                   trailing: IconButton(
                     tooltip: 'Remove ${p['id']}',
                     icon: const Icon(Icons.delete_outline),

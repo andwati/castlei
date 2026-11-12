@@ -368,11 +368,11 @@ void main() {
       await t.tap(find.bySemanticsLabel('Board cell ${i + 1}'));
       await t.pump();
       await t.scrollUntilVisible(
-        find.textContaining('1 correct / 1 attempts'),
+        find.textContaining('1 correct / 1 attempt'),
         -150,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.textContaining('1 correct / 1 attempts'), findsOneWidget);
+      expect(find.textContaining('1 correct / 1 attempt'), findsOneWidget);
       t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await t.pump();

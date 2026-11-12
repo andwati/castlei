@@ -1,3 +1,5 @@
+import '../../core/ui/plural.dart';
+
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -154,7 +156,7 @@ class _SettingsState extends State<SettingsScreen> {
                 leading: const Icon(Icons.cloud_download_outlined),
                 title: Text(e.created.toLocal().toString().substring(0, 16)),
                 subtitle: Text(
-                  '${e.games} games · ${(e.bytes / 1024).round()} KB',
+                  '${plural(e.games, 'game')} · ${(e.bytes / 1024).round()} KB',
                 ),
                 onTap: () => Navigator.pop(c, e),
               ),

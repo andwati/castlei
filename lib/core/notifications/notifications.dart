@@ -263,8 +263,8 @@ class Notifications {
         final minutes = await repo.preference('puzzleMinutes', 12 * 60) as int;
         await _plugin.zonedSchedule(
           id: puzzleId,
-          title: 'Daily tactics',
-          body: 'A fresh position is waiting.',
+          title: 'Practice puzzles',
+          body: 'A short set of tactics is waiting.',
           scheduledDate: _tz(nextOccurrence(now, minutes)),
           notificationDetails: _details,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
