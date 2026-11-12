@@ -11,8 +11,17 @@ flutter build appbundle --release \
   --target-platform android-arm64,android-x64 \
   --dart-define-from-file=firebase.env.json
 
-aab=build/app/outputs/bundle/release/app-release.aab
+built=build/app/outputs/bundle/release/app-release.aab
+
+# Gradle always writes app-release.aab; keep a copy named after the version so it is
+# obvious which release a file is (castlei-1.1.2+10.aab).
+version=$(sed -n 's/^version: *//p' pubspec.yaml | head -1 | tr -d '[:space:]')
+mkdir -p build/release
+aab="build/release/castlei-${version}.aab"
+cp -f "$built" "$aab"
+
 echo
+echo "Version $version"
 echo "Built $aab ($(du -h "$aab" | cut -f1))"
 echo "Signing certificate:"
 keytool -printcert -jarfile "$aab" | grep SHA256

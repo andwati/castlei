@@ -21,8 +21,8 @@ The Android release key lives at `android/castlei-release.jks` with its password
    ```
    flutter build appbundle --release --target-platform android-arm64,android-x64 --dart-define-from-file=firebase.env.json
    ```
-   Output: `build/app/outputs/bundle/release/app-release.aab` (about 500 MB, mostly native debug symbols; users download about 100 MB).
-3. Check the signature: `keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA256` must equal the upload fingerprint above.
+   Output: `build/release/castlei-<version>.aab` (a copy of Gradle's `build/app/outputs/bundle/release/app-release.aab`, named after the version in `pubspec.yaml`) (about 500 MB, mostly native debug symbols; users download about 100 MB).
+3. Check the signature: `keytool -printcert -jarfile build/release/castlei-<version>.aab | grep SHA256` must equal the upload fingerprint above.
 4. Play Console > Testing > Closed testing (or Production) > Create new release > upload the `.aab`, paste the notes from `play/whatsnew/whatsnew-en-US` inside `<en-US>` tags, review, roll out.
 5. Tag the release and push: `git tag -a v1.1.1 -m "Castlei 1.1.1" && git push origin main v1.1.1`.
 
