@@ -23,6 +23,7 @@ A guided review of every game.
 - Practice puzzles come in sets of 20 with Another set; puzzle themes, packs and progress use readable names; singular and plural counts are correct.
 - New Board and sound settings page with a live board: six board colour sets, legal-move dots, last-move highlight, coordinates, sounds and vibration, each with a one-line explanation.
 - Analysis and practice settings explain what each option does.
+- Your progress: a summary for the chosen period and local milestones (first game, 25 puzzles and more).
 
 Android build 11 (1.1.3+11).
 

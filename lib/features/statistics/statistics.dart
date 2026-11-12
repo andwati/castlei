@@ -50,7 +50,19 @@ class _StatsState extends State<StatisticsScreen> {
       'SELECT SUM(stage=0) AS fresh, SUM(stage>0 AND due<=?) AS due, SUM(stage>0) AS learned FROM cards',
       [now],
     );
-    return {'games': games, 'attempts': attempts, 'cards': cards.first};
+    final totals = await widget.repo.db.rows(
+      "SELECT kind, COUNT(*) AS n FROM attempts WHERE success=1 GROUP BY kind",
+    );
+    final finished = await widget.repo.db.rows(
+      "SELECT COUNT(*) AS n FROM games WHERE source='engine' AND result IN ('1-0','0-1','1/2-1/2')",
+    );
+    return {
+      'games': games,
+      'attempts': attempts,
+      'cards': cards.first,
+      'solved': {for (final t in totals) t['kind'] as String: t['n'] as int},
+      'finished': finished.first['n'] as int,
+    };
   }
 
   static const standard =
@@ -225,9 +237,65 @@ class _StatsState extends State<StatisticsScreen> {
                 if (a['success'] == 1) counts[1]++;
               }
             }
+            final solved = Map<String, int>.from(s.data!['solved'] as Map);
+            final finished = s.data!['finished'] as int;
+            final wins = games.where((g) {
+              final side = jsonDecode(g['settings'])['side'];
+              return g['result'] == (side == 'black' ? '0-1' : '1-0');
+            }).length;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SectionLabel('This period'),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        for (final e in {
+                          'Games': games.length,
+                          'Won': wins,
+                          'Puzzles': puzzles.length,
+                        }.entries)
+                          Column(
+                            children: [
+                              Text(
+                                '${e.value}',
+                                style: context.text.headlineMedium,
+                              ),
+                              Text(
+                                e.key,
+                                style: context.text.labelMedium?.copyWith(
+                                  color: context.colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SectionLabel('Milestones'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final m in milestones(
+                      finishedGames: finished,
+                      puzzles: solved['puzzle'] ?? 0,
+                      lessons: solved['lesson'] ?? 0,
+                      drills: solved['opening'] ?? 0,
+                    ))
+                      StatusChip(
+                        m.label,
+                        icon: m.earned
+                            ? Icons.emoji_events_rounded
+                            : Icons.lock_outline_rounded,
+                        color: m.earned ? context.colors.primary : null,
+                      ),
+                  ],
+                ),
                 const SectionLabel('Training'),
                 metric(
                   'Tactical puzzles',
@@ -543,3 +611,26 @@ class _StatsState extends State<StatisticsScreen> {
     ),
   );
 }
+
+class Milestone {
+  const Milestone(this.label, this.earned);
+  final String label;
+  final bool earned;
+}
+
+/// Light, local-only milestones from lifetime totals.
+List<Milestone> milestones({
+  required int finishedGames,
+  required int puzzles,
+  required int lessons,
+  required int drills,
+}) => [
+  Milestone('First game finished', finishedGames >= 1),
+  Milestone('10 games finished', finishedGames >= 10),
+  Milestone('First puzzle solved', puzzles >= 1),
+  Milestone('25 puzzles solved', puzzles >= 25),
+  Milestone('100 puzzles solved', puzzles >= 100),
+  Milestone('First lesson exercise', lessons >= 1),
+  Milestone('10 lesson exercises', lessons >= 10),
+  Milestone('First opening drill', drills >= 1),
+];

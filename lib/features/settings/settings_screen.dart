@@ -561,7 +561,7 @@ class _SettingsState extends State<SettingsScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.rate_review_outlined),
-              title: const Text('Send feedback'),
+              title: const Text('Help and feedback'),
               subtitle: const Text(
                 'Report a bug or suggest a feature, with screenshots.',
               ),
