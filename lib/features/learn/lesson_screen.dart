@@ -379,6 +379,15 @@ class _LessonScreenState extends State<LessonScreen>
                 'Exercise ${index + 1} of 3',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: (index + (done ? 1 : 0)) / 3,
+                  ),
+                ),
+              ),
               if (feedback != null)
                 Semantics(
                   liveRegion: true,

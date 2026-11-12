@@ -1,5 +1,6 @@
 import 'package:castlei/core/ui/plural.dart';
 import 'package:castlei/features/statistics/statistics.dart';
+import 'package:castlei/features/statistics/insights.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -37,5 +38,13 @@ void main() {
       'First puzzle solved',
       '25 puzzles solved',
     ]);
+  });
+
+  test('practice streak counts consecutive days', () {
+    final now = DateTime(2026, 11, 12, 9);
+    expect(practiceStreak([], now), 0);
+    expect(practiceStreak(['2026-11-12', '2026-11-11', '2026-11-09'], now), 2);
+    expect(practiceStreak(['2026-11-11', '2026-11-10'], now), 2);
+    expect(practiceStreak(['2026-11-09'], now), 0);
   });
 }

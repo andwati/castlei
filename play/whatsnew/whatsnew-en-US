@@ -1,8 +1,4 @@
-A guided review of every game.
-- Review a finished game step by step, with progress while it analyses
-- Summary first: accuracy for you and Stockfish, plus a graph
-- Walk through your mistakes with Next, marked on the board and explained simply
-- Show the better move as an arrow, or try again yourself
-- Puzzles mark wrong moves and offer Retry; Reveal draws the solution
-- Coordinate training shows its countdown
-- Board colours and a live preview in Settings
+Small touches that make progress feel earned.
+- A day streak on your progress page
+- A progress bar across each lesson's exercises
+- Plus last release: guided game reviews, clearer puzzle and lesson feedback, board colours and a live preview

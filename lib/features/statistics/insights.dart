@@ -144,3 +144,19 @@ Map<String, int> calendarActivity(
   }
   return dates;
 }
+
+/// Consecutive days of practice ending today, or yesterday when nothing has
+/// been done yet today. [days] are `yyyy-MM-dd` dates in local time.
+int practiceStreak(Iterable<String> days, DateTime now) {
+  final set = days.toSet();
+  String key(DateTime d) =>
+      DateTime(d.year, d.month, d.day).toIso8601String().substring(0, 10);
+  var day = DateTime(now.year, now.month, now.day);
+  if (!set.contains(key(day))) day = DateTime(day.year, day.month, day.day - 1);
+  var streak = 0;
+  while (set.contains(key(day))) {
+    streak++;
+    day = DateTime(day.year, day.month, day.day - 1);
+  }
+  return streak;
+}

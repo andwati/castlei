@@ -4,6 +4,15 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.4 — 2026-11-12
+
+Small touches that make progress feel earned.
+
+- Your progress shows a day streak next to games, wins and puzzles.
+- Lessons show a progress bar across their three exercises.
+
+Android build 12 (1.1.4+12).
+
 ## 1.1.3 — 2026-11-12
 
 A guided review of every game.

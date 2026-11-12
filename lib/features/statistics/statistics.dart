@@ -56,7 +56,13 @@ class _StatsState extends State<StatisticsScreen> {
     final finished = await widget.repo.db.rows(
       "SELECT COUNT(*) AS n FROM games WHERE source='engine' AND result IN ('1-0','0-1','1/2-1/2')",
     );
+    final active = await widget.repo.db.rows(
+      "SELECT DISTINCT date(created/1000,'unixepoch','localtime') AS d FROM attempts",
+    );
     return {
+      'streak': practiceStreak([
+        for (final a in active) '${a['d']}',
+      ], DateTime.now()),
       'games': games,
       'attempts': attempts,
       'cards': cards.first,
@@ -257,6 +263,7 @@ class _StatsState extends State<StatisticsScreen> {
                           'Games': games.length,
                           'Won': wins,
                           'Puzzles': puzzles.length,
+                          'Day streak': s.data!['streak'] as int,
                         }.entries)
                           Column(
                             children: [
