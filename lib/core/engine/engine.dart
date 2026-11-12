@@ -55,6 +55,18 @@ class EngineLine {
   };
 }
 
+/// Records [line] as the current answer for its variation and returns the line
+/// now held. A bound line (`lowerbound`/`upperbound`) is what the engine prints
+/// while it re-searches after a surprise, so when the clock stops a search the
+/// last line received is often one. It must not replace an exact score for the
+/// same variation, or nearly every reviewed move would read as uncertain.
+EngineLine mergeLine(Map<int, EngineLine> lines, EngineLine line) {
+  final previous = lines[line.index];
+  if (line.bounded && previous != null && !previous.bounded) return previous;
+  lines[line.index] = line;
+  return line;
+}
+
 class SearchResult {
   SearchResult(this.bestmove, this.lines);
   final String bestmove;
@@ -143,8 +155,8 @@ class EngineClient {
           } else {
             final line = EngineLine.parse(s);
             if (line != null) {
-              lines[line.index] = line;
-              if (generation == _generation) onLine?.call(line);
+              final kept = mergeLine(lines, line);
+              if (generation == _generation) onLine?.call(kept);
             }
           }
         });
