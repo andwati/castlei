@@ -92,8 +92,9 @@ class EvalGraph extends StatelessWidget {
         FlSpot(p.ply.toDouble(), p.whitePawns.clamp(-8, 8)),
     ];
     int count(String l) => points.where((p) => p.label == l).length;
+    String n(int c, String one, String many) => '$c ${c == 1 ? one : many}';
     final summary =
-        '${count('Blunder')} blunders, ${count('Mistake')} mistakes, ${count('Inaccuracy')} inaccuracies';
+        '${n(count('Blunder'), 'blunder', 'blunders')}, ${n(count('Mistake'), 'mistake', 'mistakes')}, ${n(count('Inaccuracy'), 'inaccuracy', 'inaccuracies')}';
     return Semantics(
       label: 'Evaluation graph. $summary. Tap a point to jump to that move.',
       child: Card(

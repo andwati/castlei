@@ -91,7 +91,7 @@ void main() {
     expect(find.byType(EvalGraph), findsOneWidget);
     expect(
       find.bySemanticsLabel(
-        RegExp('Evaluation graph. 1 blunders, 1 mistakes, 1 inaccuracies'),
+        RegExp('Evaluation graph. 1 blunder, 1 mistake, 1 inaccuracy'),
       ),
       findsOneWidget,
     );

@@ -381,6 +381,25 @@ class GameCubit extends Cubit<GameView> {
     var done = 0;
     final config = 'sf18-v1-$milliseconds';
     final reviewTimer = Stopwatch()..start();
+
+    // The engine is shared: another screen closing cancels whatever is running.
+    // That is not this review's doing, so look again instead of failing.
+    Future<SearchResult> search(List<String> moves, String? onlyMove) async {
+      for (var attempt = 0; ; attempt++) {
+        try {
+          return await engine.search(
+            fen: game.rootFen,
+            moves: moves,
+            milliseconds: milliseconds,
+            onlyMove: onlyMove,
+          );
+        } on SearchCanceled {
+          if (token != epoch || isClosed || attempt >= 4) rethrow;
+          await Future<void>.delayed(const Duration(milliseconds: 150));
+        }
+      }
+    }
+
     try {
       for (final n in nodes) {
         if (token != epoch || isClosed) return;
@@ -397,18 +416,9 @@ class GameCubit extends Cubit<GameView> {
         }
         final moveTimer = Stopwatch()..start();
         final path = game.path(n.parent).map((e) => e.uci).toList();
-        final best = await engine.search(
-          fen: game.rootFen,
-          moves: path,
-          milliseconds: milliseconds,
-        );
+        final best = await search(path, null);
         if (token != epoch) return;
-        final played = await engine.search(
-          fen: game.rootFen,
-          moves: path,
-          milliseconds: milliseconds,
-          onlyMove: n.uci,
-        );
+        final played = await search(path, n.uci);
         if (token != epoch) return;
         if (best.lines.isNotEmpty && played.lines.isNotEmpty) {
           await repo.db.execute('INSERT INTO analysis VALUES(?,?,?,?,?)', [
@@ -441,7 +451,9 @@ class GameCubit extends Cubit<GameView> {
       if (!isClosed) {
         emit(
           GameView(
-            error: e.toString(),
+            error: e is SearchCanceled
+                ? 'The review was interrupted.'
+                : e.toString(),
             reviewDone: done,
             reviewTotal: nodes.length,
           ),

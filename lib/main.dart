@@ -36,6 +36,7 @@ import 'core/ui/theme.dart';
 import 'core/ui/widgets.dart';
 import 'features/play/play_screen.dart';
 import 'features/analysis/analysis_screen.dart';
+import 'features/analysis/review_screen.dart';
 import 'features/analysis/position_editor.dart';
 import 'features/puzzles/training_screen.dart';
 import 'features/puzzles/training.dart';
@@ -271,9 +272,11 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => study
-            ? AnalysisScreen(game: g, repo: widget.repo, engine: widget.engine)
-            : PlayScreen(game: g, repo: widget.repo, engine: widget.engine),
+        builder: (_) => !study
+            ? PlayScreen(game: g, repo: widget.repo, engine: widget.engine)
+            : g.source == 'engine' && g.result != '*'
+            ? ReviewScreen(game: g, repo: widget.repo, engine: widget.engine)
+            : AnalysisScreen(game: g, repo: widget.repo, engine: widget.engine),
       ),
     );
     if (mounted) setState(() {});

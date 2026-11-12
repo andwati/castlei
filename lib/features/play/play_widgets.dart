@@ -305,7 +305,8 @@ class ResultPanel extends StatelessWidget {
   });
   final String headline, reason;
   final bool won;
-  final VoidCallback onReview, onRematch;
+  final VoidCallback? onReview;
+  final VoidCallback onRematch;
   @override
   Widget build(BuildContext context) {
     final c = context.colors;

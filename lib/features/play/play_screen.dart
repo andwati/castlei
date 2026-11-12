@@ -16,7 +16,7 @@ import '../../core/ui/sfx.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 import '../analysis/eval_graph.dart';
-import '../analysis/analysis_screen.dart';
+import '../analysis/review_screen.dart';
 import 'game_common.dart';
 import 'game_cubit.dart';
 import 'play_widgets.dart';
@@ -174,7 +174,7 @@ class _PlayScreenState extends State<PlayScreen>
   void _review() => Navigator.pushReplacement(
     context,
     MaterialPageRoute(
-      builder: (_) => AnalysisScreen(
+      builder: (_) => ReviewScreen(
         game: widget.game,
         repo: widget.repo,
         engine: widget.engine,
@@ -215,7 +215,7 @@ class _PlayScreenState extends State<PlayScreen>
             : 'You lost',
         reason: '${g.settings['reason'] ?? 'Finished'}',
         won: won || g.result == '1/2-1/2',
-        onReview: _review,
+        onReview: widget.game.mainline.isEmpty ? null : _review,
         onRematch: _rematch,
       );
     }

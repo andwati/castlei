@@ -9,6 +9,10 @@ import 'theme.dart';
 
 /// A small badge on a square, e.g. a move-quality mark in a game review. The
 /// glyph carries the meaning; the colour only reinforces it.
+/// Text colour that stays readable on [background].
+Color markForeground(Color background) =>
+    background.computeLuminance() > .4 ? const Color(0xff1b1b1b) : Colors.white;
+
 class BoardMark {
   const BoardMark(this.glyph, this.color, {this.label = ''});
   final String glyph, label;
@@ -525,8 +529,8 @@ class _BoardState extends State<ChessBoard> {
                                       padding: EdgeInsets.all(d * .12),
                                       child: Text(
                                         e.value.glyph,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: markForeground(e.value.color),
                                           fontWeight: FontWeight.w900,
                                           height: 1,
                                         ),
