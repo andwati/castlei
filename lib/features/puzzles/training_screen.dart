@@ -32,7 +32,7 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
   List<Map<String, dynamic>> items = [];
   int index = 0, ply = 0, hints = 0;
   bool sound = false, haptics = true, revealing = false;
-  String? lastMove;
+  String? lastMove, wrongMove;
   int revealPly = 0;
   bool failed = false, complete = false, busy = false, loading = true;
   String message = 'Find the move';
@@ -147,6 +147,7 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
     revealing = false;
     revealPly = 0;
     hints = 0;
+    wrongMove = null;
     failed = false;
     complete = false;
     message = opening ? 'Play a repertoire move' : 'Find the best continuation';
@@ -210,14 +211,16 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
         : solution[ply] != normalized) {
       setState(() {
         failed = true;
+        wrongMove = normalized;
         message = opening
-            ? 'Outside your repertoire. Try again.'
-            : 'Not the supplied solution. Try again.';
+            ? 'That move is outside your repertoire. Try again.'
+            : 'Not quite. That is not the best move here. Try again.';
       });
       return;
     }
     busy = true;
     setState(() {
+      wrongMove = null;
       _play(normalized);
       ply++;
       message = opening || ply == solution.length
@@ -365,10 +368,23 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                       Side.black,
                   enabled: !complete && !busy,
                   onMove: move,
-                  shapes: hints == 1 && !complete
-                      ? ['Y${solution[opening ? 0 : ply].substring(0, 2)}']
-                      : [],
-                  arrow: hints > 1 && !complete
+                  shapes: [
+                    if (hints == 1 && !complete)
+                      'Y${solution[opening ? 0 : ply].substring(0, 2)}',
+                    if (wrongMove != null && !complete)
+                      'R${wrongMove!.substring(0, 4)}',
+                  ],
+                  marks: {
+                    if (wrongMove != null && !complete)
+                      wrongMove!.substring(2, 4): const BoardMark(
+                        '✗',
+                        Color(0xffd8433a),
+                        label: 'Not the best move',
+                      ),
+                  },
+                  arrow: revealing && revealPly < solution.length
+                      ? solution[revealPly]
+                      : hints > 1 && !complete
                       ? solution[opening ? 0 : ply]
                       : null,
                 ),
@@ -392,10 +408,25 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                 if (!complete)
                   ToolRow(
                     children: [
+                      if (wrongMove != null)
+                        ToolButton(
+                          icon: Icons.refresh_rounded,
+                          label: 'Retry',
+                          onTap: () => setState(() {
+                            wrongMove = null;
+                            message = 'Try again';
+                          }),
+                        ),
                       ToolButton(
                         icon: Icons.lightbulb_outline_rounded,
                         label: 'Hint',
-                        onTap: () => setState(() => hints++),
+                        onTap: () => setState(() {
+                          hints = (hints + 1).clamp(0, 2);
+                          wrongMove = null;
+                          message = hints == 1
+                              ? 'Look at the highlighted piece.'
+                              : 'The arrow shows the move.';
+                        }),
                       ),
                       ToolButton(
                         icon: Icons.visibility_outlined,
@@ -403,7 +434,8 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
                         onTap: () async {
                           setState(() {
                             failed = true;
-                            message = 'Solution: $solutionSan';
+                            wrongMove = null;
+                            message = 'The solution is $solutionSan';
                             revealing = true;
                           });
                           await finish(false);

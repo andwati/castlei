@@ -138,7 +138,8 @@ class _LessonScreenState extends State<LessonScreen>
       assisted = false,
       sound = false,
       haptics = true;
-  String? lastMove, feedback;
+  String? lastMove, feedback, wrongMove;
+  final Set<int> wrongChoices = {};
   late Position position;
   List<String> played = [];
   final watch = Stopwatch();
@@ -180,6 +181,8 @@ class _LessonScreenState extends State<LessonScreen>
     busy = false;
     feedback = null;
     lastMove = null;
+    wrongMove = null;
+    wrongChoices.clear();
     watch.reset();
     watch.start();
   }
@@ -260,11 +263,13 @@ class _LessonScreenState extends State<LessonScreen>
     });
   }
 
-  void wrong() {
+  void wrong([String? uci, int? choice]) {
     setState(() {
       failed = true;
+      wrongMove = uci;
+      if (choice != null) wrongChoices.add(choice);
       helped.add(index);
-      feedback = 'Try again. ${exercise.hint}';
+      feedback = 'Not quite. ${exercise.hint}';
     });
   }
 
@@ -273,7 +278,7 @@ class _LessonScreenState extends State<LessonScreen>
     if (choice == exercise.correct) {
       await finish();
     } else {
-      wrong();
+      wrong(null, choice);
     }
   }
 
@@ -302,11 +307,12 @@ class _LessonScreenState extends State<LessonScreen>
         )
         .toList();
     if (candidates.isEmpty) {
-      wrong();
+      wrong(uci);
       return;
     }
     setState(() {
       busy = true;
+      wrongMove = null;
       commit(uci);
       feedback = 'Good move';
     });
@@ -351,17 +357,46 @@ class _LessonScreenState extends State<LessonScreen>
                 widget.lesson.module,
                 style: Theme.of(context).textTheme.labelLarge,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  widget.lesson.body,
-                  style: Theme.of(context).textTheme.bodyLarge,
+              Theme(
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  key: ValueKey('idea$index'),
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  initiallyExpanded: false,
+                  title: const Text('The idea'),
+                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.lesson.body,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
                 ),
               ),
               Text(
                 'Exercise ${index + 1} of 3',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
+              if (feedback != null)
+                Semantics(
+                  liveRegion: true,
+                  child: FeedbackCard(
+                    feedback!,
+                    tone: done
+                        ? Tone.good
+                        : failed
+                        ? Tone.bad
+                        : Tone.info,
+                    icon: done
+                        ? Icons.check_circle
+                        : failed
+                        ? Icons.close_rounded
+                        : Icons.info_outline,
+                  ),
+                ),
+              if (feedback != null) const SizedBox(height: 8),
               TurnCue(position: position),
               ChessBoard(
                 position: position,
@@ -369,6 +404,18 @@ class _LessonScreenState extends State<LessonScreen>
                 lastMove: lastMove,
                 enabled: !done && !busy && exercise.options.isEmpty,
                 onMove: move,
+                shapes: [
+                  if (wrongMove != null && !done)
+                    'R${wrongMove!.substring(0, 4)}',
+                ],
+                marks: {
+                  if (wrongMove != null && !done)
+                    wrongMove!.substring(2, 4): const BoardMark(
+                      '✗',
+                      Color(0xffd8433a),
+                      label: 'Not the move',
+                    ),
+                },
                 arrow: hints > 0 && exercise.solutions.isNotEmpty && !done
                     ? exercise.solutions.firstWhere(
                         (line) => line.take(ply).join(' ') == played.join(' '),
@@ -386,24 +433,18 @@ class _LessonScreenState extends State<LessonScreen>
                 for (var i = 0; i < exercise.options.length; i++)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: OutlinedButton(
-                      onPressed: done || busy ? null : () => answer(i),
-                      child: Text(exercise.options[i]),
+                    child: OutlinedButton.icon(
+                      onPressed: done || busy || wrongChoices.contains(i)
+                          ? null
+                          : () => answer(i),
+                      icon: done && i == exercise.correct
+                          ? const Icon(Icons.check_circle_rounded)
+                          : wrongChoices.contains(i)
+                          ? const Icon(Icons.close_rounded)
+                          : const SizedBox.shrink(),
+                      label: Text(exercise.options[i]),
                     ),
                   ),
-              if (feedback != null)
-                Semantics(
-                  liveRegion: true,
-                  child: FeedbackCard(
-                    feedback!,
-                    tone: done
-                        ? Tone.good
-                        : failed
-                        ? Tone.bad
-                        : Tone.info,
-                    icon: done ? Icons.check_circle : Icons.info_outline,
-                  ),
-                ),
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: ActionStack(

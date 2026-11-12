@@ -36,6 +36,9 @@ class _CoordinateState extends State<CoordinateScreen>
       saving = false,
       ready = false;
   int correct = 0, attempts = 0, best = 0;
+  String? flashSquare;
+  bool flashRight = true;
+  Timer? flashTimer;
   final random = Random();
   final watch = Stopwatch();
   final response = Stopwatch();
@@ -56,7 +59,7 @@ class _CoordinateState extends State<CoordinateScreen>
     );
     mode = settings['mode'] ?? 'find';
     orientation = settings['orientation'] ?? 'white';
-    timed = settings['timed'] == true;
+    timed = settings['timed'] != false;
     await refreshBest();
     if (mounted) setState(() => ready = true);
   }
@@ -161,6 +164,12 @@ class _CoordinateState extends State<CoordinateScreen>
     setState(() {
       attempts++;
       responses.add(response.elapsedMilliseconds);
+      flashSquare = mode == 'find' ? square : null;
+      flashRight = square == target;
+      flashTimer?.cancel();
+      flashTimer = Timer(const Duration(milliseconds: 450), () {
+        if (mounted) setState(() => flashSquare = null);
+      });
       if (square == target) {
         correct++;
         message = 'Correct · $square';
@@ -183,6 +192,7 @@ class _CoordinateState extends State<CoordinateScreen>
   @override
   void dispose() {
     timer?.cancel();
+    flashTimer?.cancel();
     watch.stop();
     response.stop();
     WidgetsBinding.instance.removeObserver(this);
@@ -256,6 +266,15 @@ class _CoordinateState extends State<CoordinateScreen>
                 Text(
                   '${black ? 'Black' : 'White'} view · $correct correct / $attempts attempts${timed ? ' · ${((30000 - watch.elapsedMilliseconds).clamp(0, 30000) / 1000).ceil()}s left' : ''}',
                 ),
+                if (timed)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: LinearProgressIndicator(
+                      value:
+                          (30000 - watch.elapsedMilliseconds).clamp(0, 30000) /
+                          30000,
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Center(
                   child: ConstrainedBox(
@@ -283,7 +302,11 @@ class _CoordinateState extends State<CoordinateScreen>
                                   : null,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: (i ~/ 8 + i % 8).isEven
+                                  color: flashSquare == square
+                                      ? (flashRight
+                                            ? const Color(0xff3f9b6e)
+                                            : const Color(0xffd8433a))
+                                      : (i ~/ 8 + i % 8).isEven
                                       ? context.tokens.boardLight
                                       : context.tokens.boardDark,
                                   border: highlight

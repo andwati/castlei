@@ -252,6 +252,8 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      await t.ensureVisible(find.text('d4'));
+      await t.pumpAndSettle();
       await t.tap(find.text('d4'));
       await t.pumpAndSettle();
       expect(
@@ -268,6 +270,8 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      await t.ensureVisible(find.text('c6'));
+      await t.pumpAndSettle();
       await t.tap(find.text('c6'));
       await t.pumpAndSettle();
       await t.scrollUntilVisible(
@@ -275,6 +279,8 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      await t.ensureVisible(find.text('Next exercise'));
+      await t.pumpAndSettle();
       await t.tap(find.text('Next exercise'));
       await t.pumpAndSettle();
       await t.scrollUntilVisible(
@@ -282,6 +288,8 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      await t.ensureVisible(find.text('h2'));
+      await t.pumpAndSettle();
       await t.tap(find.text('h2'));
       await t.pumpAndSettle();
       expect(

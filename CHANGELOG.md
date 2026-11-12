@@ -14,6 +14,9 @@ A guided review of every game.
 - Show the better move as an arrow, or try again and find it yourself.
 - Reviews keep going if another screen uses the engine, and say so clearly if one is interrupted.
 - Your full analysis workspace is still one tap away under Explore this game.
+- Puzzles: a wrong move is marked on the board with a Retry button, hints come in two steps (the piece, then the arrow), and Reveal draws the solution.
+- Lessons: feedback now sits above the board, wrong answers are crossed out, the right one gets a tick, and the lesson text folds under "The idea".
+- Coordinate training: the 30-second challenge is on by default with a countdown bar, and the tapped square flashes green or red.
 
 Android build 11 (1.1.3+11).
 
