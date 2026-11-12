@@ -436,4 +436,33 @@ void main() {
       await t.runAsync(db.close);
     },
   );
+  testWidgets('play screen lays out on a wide tablet without overflow', (
+    t,
+  ) async {
+    t.view.devicePixelRatio = 1;
+    t.view.physicalSize = const Size(1280, 800);
+    addTearDown(t.view.reset);
+    final db = AppDatabase.memory();
+    final repo = Repository(db);
+    final engine = EngineClient();
+    final game = ChessGame(
+      id: newId(),
+      title: 'Wide',
+      source: 'engine',
+      rootFen: Chess.initial.fen,
+      created: 0,
+    );
+    await repo.save(game);
+    await t.pumpWidget(
+      host(PlayScreen(game: game, repo: repo, engine: engine)),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('Resign'), findsOneWidget);
+    expect(find.byType(ChessBoard), findsOneWidget);
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox());
+    await t.pumpAndSettle();
+    await t.runAsync(engine.dispose);
+    await t.runAsync(db.close);
+  });
 }

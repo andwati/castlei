@@ -17,6 +17,8 @@ A guided review of every game.
 - Puzzles: a wrong move is marked on the board with a Retry button, hints come in two steps (the piece, then the arrow), and Reveal draws the solution.
 - Lessons: feedback now sits above the board, wrong answers are crossed out, the right one gets a tick, and the lesson text folds under "The idea".
 - Coordinate training: the 30-second challenge is on by default with a countdown bar, and the tapped square flashes green or red.
+- New game: opponent, side and time are one-tap choices, and the position editor and FEN live under Advanced.
+- Resign and Take back work while a game is paused.
 
 Android build 11 (1.1.3+11).
 

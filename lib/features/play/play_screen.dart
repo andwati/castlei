@@ -166,9 +166,12 @@ class _PlayScreenState extends State<PlayScreen>
   }
 
   Future<void> _takeBack() async {
+    final wasPaused = cubit.state.paused;
     await cubit.undo();
     hintLevel = 0;
-    if (mounted && widget.game.result == '*') await cubit.resume();
+    if (mounted && widget.game.result == '*' && !wasPaused) {
+      await cubit.resume();
+    }
   }
 
   void _review() => Navigator.pushReplacement(
@@ -246,27 +249,28 @@ class _PlayScreenState extends State<PlayScreen>
             icon: const Icon(Icons.play_arrow),
             label: const Text('Resume'),
           ),
-        ] else
-          ToolRow(
-            children: [
-              ToolButton(
-                icon: Icons.undo_rounded,
-                label: 'Take back',
-                onTap: g.current == null || state.thinking ? null : _takeBack,
-              ),
-              ToolButton(
-                icon: Icons.lightbulb_outline_rounded,
-                label: 'Hint',
-                onTap: cubit.canMove ? _hint : null,
-              ),
-              ToolButton(
-                icon: Icons.flag_outlined,
-                label: 'Resign',
-                danger: true,
-                onTap: _resign,
-              ),
-            ],
-          ),
+          const SizedBox(height: 8),
+        ],
+        ToolRow(
+          children: [
+            ToolButton(
+              icon: Icons.undo_rounded,
+              label: 'Take back',
+              onTap: g.current == null || state.thinking ? null : _takeBack,
+            ),
+            ToolButton(
+              icon: Icons.lightbulb_outline_rounded,
+              label: 'Hint',
+              onTap: cubit.canMove ? _hint : null,
+            ),
+            ToolButton(
+              icon: Icons.flag_outlined,
+              label: 'Resign',
+              danger: true,
+              onTap: _resign,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -327,13 +331,10 @@ class _PlayScreenState extends State<PlayScreen>
                 '${g.position.isCheck ? ', in check' : ''}';
       return Scaffold(
         appBar: AppBar(
-          title: Semantics(
-            label: opening == null ? 'Game' : 'Opening: ${opening.$2}',
-            child: Text(
-              opening?.$2 ?? 'Game',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          title: Text(
+            opening?.$2 ?? 'Game',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           actions: [
             if (cubit.timed && !over && !state.paused)

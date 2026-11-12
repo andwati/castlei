@@ -314,6 +314,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     var side = 'white';
     var base = 0;
     var increment = 0;
+    var timeChoice = 0;
     var fen = Chess.initial.fen;
     final ok = await showDialog<bool>(
       context: context,
@@ -325,49 +326,39 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (!study) ...[
-                  DropdownButtonFormField<int>(
-                    initialValue: level,
-                    isExpanded: true,
-                    itemHeight: 64,
-                    decoration: const InputDecoration(labelText: 'Difficulty'),
-                    items: [
+                  const _DialogLabel('Opponent'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
                       for (final opponent in EngineOpponent.all)
-                        DropdownMenuItem(
-                          value: opponent.skill,
-                          child: Row(
-                            children: [
-                              EngineAvatar(opponent: opponent, size: 40),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  opponent.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
+                        ChoiceChip(
+                          avatar: EngineAvatar(opponent: opponent, size: 24),
+                          label: Text(opponent.label),
+                          selected: level == opponent.skill,
+                          onSelected: (_) =>
+                              update(() => level = opponent.skill),
                         ),
                     ],
-                    onChanged: (v) => level = v!,
                   ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: side,
-                    decoration: const InputDecoration(labelText: 'Your side'),
-                    items: [
-                      for (final s in ['white', 'black', 'random'])
-                        DropdownMenuItem(value: s, child: Text(s)),
+                  const SizedBox(height: 16),
+                  const _DialogLabel('You play'),
+                  SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: 'white', label: Text('White')),
+                      ButtonSegment(value: 'black', label: Text('Black')),
+                      ButtonSegment(value: 'random', label: Text('Random')),
                     ],
-                    onChanged: (v) => side = v!,
+                    selected: {side},
+                    onSelectionChanged: (v) => update(() => side = v.first),
                   ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: 0,
-                    decoration: const InputDecoration(
-                      labelText: 'Time control',
-                    ),
-                    items: [
+                  const SizedBox(height: 16),
+                  const _DialogLabel('Time'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
                       for (final p in [
                         (0, 'Untimed'),
                         (3, '3+2'),
@@ -376,50 +367,75 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                         (15, '15+10'),
                         (-1, 'Custom'),
                       ])
-                        DropdownMenuItem(value: p.$1, child: Text(p.$2)),
+                        ChoiceChip(
+                          label: Text(p.$2),
+                          selected: timeChoice == p.$1,
+                          onSelected: (_) => update(() {
+                            timeChoice = p.$1;
+                            base = p.$1 == -1 ? 5 : p.$1;
+                            increment = {3: 2, 5: 3, 15: 10}[p.$1] ?? 0;
+                          }),
+                        ),
                     ],
-                    onChanged: (v) => update(() {
-                      base = v!;
-                      increment = {3: 2, 5: 3, 15: 10}[v] ?? 0;
-                    }),
                   ),
-                  if (base == -1) ...[
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Base minutes (1–180)',
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (v) => base = int.tryParse(v) ?? -1,
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Increment seconds (0–60)',
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (v) => increment = int.tryParse(v) ?? 0,
+                  if (timeChoice == -1) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      spacing: 12,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: '$base',
+                            decoration: const InputDecoration(
+                              labelText: 'Minutes (1–180)',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) => base = int.tryParse(v) ?? -1,
+                          ),
+                        ),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: '$increment',
+                            decoration: const InputDecoration(
+                              labelText: 'Extra seconds (0–60)',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) => increment = int.tryParse(v) ?? 0,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                 ],
-                TextButton.icon(
-                  onPressed: () async {
-                    final result = await Navigator.push<String>(
-                      ctx,
-                      MaterialPageRoute(
-                        builder: (_) => PositionEditor(initialFen: fen),
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text('Advanced: starting position'),
+                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () async {
+                        final result = await Navigator.push<String>(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => PositionEditor(initialFen: fen),
+                          ),
+                        );
+                        if (result != null) update(() => fen = result);
+                      },
+                      icon: const Icon(Icons.grid_on),
+                      label: const Text('Set up a position'),
+                    ),
+                    TextFormField(
+                      key: ValueKey(fen),
+                      initialValue: fen,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Position (FEN)',
                       ),
-                    );
-                    if (result != null) update(() => fen = result);
-                  },
-                  icon: const Icon(Icons.grid_on),
-                  label: const Text('Visual position editor'),
-                ),
-                TextFormField(
-                  key: ValueKey(fen),
-                  initialValue: fen,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Starting FEN'),
-                  onChanged: (v) => fen = v,
+                      onChanged: (v) => fen = v,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1310,4 +1326,17 @@ Future<void> _seedStarterPuzzles(Repository repo) async {
       );
     }
   });
+}
+
+class _DialogLabel extends StatelessWidget {
+  const _DialogLabel(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Text(text, style: Theme.of(context).textTheme.labelLarge),
+    ),
+  );
 }
