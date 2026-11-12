@@ -398,26 +398,34 @@ class GameCubit extends Cubit<GameView> {
 
   /// Reviews every move. [milliseconds] names the stored result (the analysis
   /// setting); each search runs for [searchMs] when given, else the same time.
+  ///
+  /// Each position is searched once. The score of the move that was played is
+  /// the opponent's score in the position it leads to, negated, and that
+  /// position is the next one to be searched anyway. This halves the work of
+  /// searching "best move" and "played move" separately.
   Future<void> review(int milliseconds, {int? searchMs}) async {
     engine.cancel();
     Analytics.log('review_started', {'budget_ms': milliseconds});
     final token = ++epoch;
     final nodes = game.mainline;
     var done = 0;
-    final config = 'sf18-v1-$milliseconds';
+    final config = reviewConfig(milliseconds);
     final reviewTimer = Stopwatch()..start();
+    var fresh = true;
 
     // The engine is shared: another screen closing cancels whatever is running.
     // That is not this review's doing, so look again instead of failing.
-    Future<SearchResult> search(List<String> moves, String? onlyMove) async {
+    Future<SearchResult> search(List<String> moves) async {
       for (var attempt = 0; ; attempt++) {
         try {
-          return await engine.search(
+          final result = await engine.search(
             fen: game.rootFen,
             moves: moves,
             milliseconds: searchMs ?? milliseconds,
-            onlyMove: onlyMove,
+            newGame: fresh,
           );
+          fresh = false;
+          return result;
         } on SearchCanceled {
           if (token != epoch || isClosed || attempt >= 4) rethrow;
           await Future<void>.delayed(const Duration(milliseconds: 150));
@@ -426,6 +434,9 @@ class GameCubit extends Cubit<GameView> {
     }
 
     try {
+      // The search of the position before the next move, kept from the move
+      // before it when that move was reviewed in this run.
+      SearchResult? carried;
       for (final n in nodes) {
         if (token != epoch || isClosed) return;
         emit(
@@ -437,15 +448,22 @@ class GameCubit extends Cubit<GameView> {
         );
         if (existing.isNotEmpty) {
           done++;
+          carried = null;
           continue;
         }
         final moveTimer = Stopwatch()..start();
         final path = game.path(n.parent).map((e) => e.uci).toList();
-        final best = await search(path, null);
+        final best = carried ?? await search(path);
         if (token != epoch) return;
-        final played = await search(path, n.uci);
+        final after = await search([...path, n.uci]);
+        carried = after;
         if (token != epoch) return;
-        if (best.lines.isNotEmpty && played.lines.isNotEmpty) {
+        if (best.lines.isNotEmpty && after.lines.isNotEmpty) {
+          // Drop a result from an older engine or method for this move.
+          await repo.db.execute(
+            'DELETE FROM analysis WHERE game_id=? AND node_id=?',
+            [game.id, n.id],
+          );
           await repo.db.execute('INSERT INTO analysis VALUES(?,?,?,?,?)', [
             newId(),
             game.id,
@@ -453,7 +471,7 @@ class GameCubit extends Cubit<GameView> {
             config,
             jsonText(
               best.lines.first,
-              played.lines.first,
+              playedLine(n.uci, after.lines.first),
               best.bestmove == n.uci,
             ),
           ]);
@@ -500,3 +518,22 @@ String jsonText(EngineLine a, EngineLine b, bool same) => jsonEncode({
   'played': b.toJson(),
   'label': classify(a, b, sameMove: same),
 });
+
+/// Key under which a review is stored. Changes when the engine or the way a
+/// review is computed changes, so old results are not mixed with new ones.
+String reviewConfig(int milliseconds) => 'sf19-v2-$milliseconds';
+
+/// The line for the move [uci] that was played, taken from the search of the
+/// position it led to ([after], scored for the side to move there).
+EngineLine playedLine(String uci, EngineLine after) {
+  // A search with no legal moves reports depth 0: mate 0 is checkmate, which
+  // means the player who just moved delivered it.
+  final mated = after.depth == 0 && after.mate && after.score == 0;
+  return EngineLine(
+    depth: after.depth,
+    score: mated ? 1 : -after.score,
+    mate: after.mate,
+    pv: [uci, ...after.pv],
+    bounded: after.bounded,
+  );
+}

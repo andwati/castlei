@@ -10,7 +10,7 @@ import 'env.dart';
 import 'log.dart';
 
 const appVersion = '1.0.0+1';
-const engineVersion = 'stockfish-18';
+const engineVersion = 'stockfish-19';
 
 /// An error stripped of anything that could expose chess content or files.
 class SanitizedError implements Exception {

@@ -1,3 +1,5 @@
+import '../engine/engine.dart';
+
 import 'dart:io';
 
 import 'package:package_info_plus/package_info_plus.dart';
@@ -124,7 +126,7 @@ Future<String> buildSnapshot(Repository repo) async {
       'training attempts by kind': attempts,
     },
     'engine settings': {
-      'threads/hash preset': await pref('resources', 1),
+      'threads/hash preset': await pref('resources', defaultEngineThreads),
       'analysis budget (ms)': await pref('analysisMs', 3000),
       'candidate lines': await pref('multiPv', 3),
     },

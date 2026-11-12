@@ -29,7 +29,7 @@ class _PreferencesState extends State<PreferencesScreen> {
     'coordinates': true,
     'analysisMs': 3000,
     'multiPv': 3,
-    'resources': 1,
+    'resources': defaultEngineThreads,
     'dueLimit': 20,
     'newLimit': 5,
   };
@@ -51,7 +51,7 @@ class _PreferencesState extends State<PreferencesScreen> {
     if (key == 'resources') {
       widget.engine.cancel();
       widget.engine.threads = value as int;
-      widget.engine.hashMb = value == 1 ? 64 : 128;
+      widget.engine.hashMb = hashFor(value);
     }
     setState(() => values[key] = value);
   }
@@ -146,8 +146,12 @@ class _PreferencesState extends State<PreferencesScreen> {
               choice(
                 'resources',
                 'Engine resources',
-                [1, 2],
-                ['1 thread · 64 MB', '2 threads · 128 MB'],
+                [1, 2, 4],
+                [
+                  '1 thread · 64 MB · gentlest',
+                  '2 threads · 128 MB',
+                  '4 threads · 128 MB · fastest',
+                ],
               ),
               const FeedbackCard(
                 'More engine resources can increase heat and battery use. Search budgets apply to each search, not the entire review.',

@@ -61,7 +61,7 @@ void main() {
         newId(),
         copy.id,
         line[i].id,
-        'sf18-v1-3000',
+        'sf19-v2-3000',
         labels[i] == 'Blunder'
             ? data(labels[i], 40, -300, ['g1f3'])
             : data(labels[i], 30, 30, ['e2e4']),

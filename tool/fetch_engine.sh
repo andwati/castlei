@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-revision=cb3d4ee9b47d0c5aae855b12379378ea1439675c
+revision=edb0d9db6731067ec50ce619ff372b463bc4dd5d
 if [ ! -d native/stockfish/.git ]; then
-  git clone --depth 1 --branch sf_18 https://github.com/official-stockfish/Stockfish.git native/stockfish
+  git clone --depth 1 --branch sf_19 https://github.com/official-stockfish/Stockfish.git native/stockfish
 fi
 test "$(git -C native/stockfish rev-parse HEAD)" = "$revision"
 make -C native/stockfish/src net

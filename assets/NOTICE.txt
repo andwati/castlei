@@ -1,6 +1,6 @@
 Castlei is GPL-3.0.
-Stockfish 18: Copyright Stockfish developers, GPL-3.0-or-later.
-Source: https://github.com/official-stockfish/Stockfish/tree/cb3d4ee9b47d0c5aae855b12379378ea1439675c
+Stockfish 19: Copyright Stockfish developers, GPL-3.0-or-later.
+Source: https://github.com/official-stockfish/Stockfish/tree/edb0d9db6731067ec50ce619ff372b463bc4dd5d
 Native adapter: Castlei contributors, GPL-3.0.
 Chess piece SVGs: Colin M. L. Burnett, GPL-2.0-or-later (used under GPL-3.0).
 Source: https://github.com/lichess-org/lila/tree/master/public/piece/cburnett

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(castlei_engine LANGUAGES CXX)
-file(GLOB ENGINE_SOURCES stockfish/src/*.cpp stockfish/src/nnue/*.cpp stockfish/src/nnue/features/*.cpp stockfish/src/syzygy/*.cpp)
+file(GLOB ENGINE_SOURCES CONFIGURE_DEPENDS stockfish/src/*.cpp stockfish/src/nnue/*.cpp stockfish/src/nnue/features/*.cpp stockfish/src/syzygy/*.cpp)
 list(FILTER ENGINE_SOURCES EXCLUDE REGEX "/main.cpp$")
 add_library(castlei_engine SHARED adapter.cpp ${ENGINE_SOURCES})
 target_compile_features(castlei_engine PRIVATE cxx_std_17)

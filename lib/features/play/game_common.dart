@@ -31,9 +31,9 @@ mixin GamePreferences<T extends StatefulWidget> on State<T> {
     final hap = await repo.preference('haptics', true);
     final ms = await repo.preference('analysisMs', 3000);
     final lines = await repo.preference('multiPv', 3);
-    final threads = await repo.preference('resources', 1);
+    final threads = await repo.preference('resources', defaultEngineThreads);
     engine.threads = threads;
-    engine.hashMb = threads == 1 ? 64 : 128;
+    engine.hashMb = hashFor(threads);
     if (mounted) {
       setState(() {
         coordinates = coords;

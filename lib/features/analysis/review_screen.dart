@@ -61,9 +61,9 @@ class _ReviewScreenState extends State<ReviewScreen>
   List<int> stops = [];
   int index = 0;
 
-  /// Each move is searched twice, so a review uses half the analysis budget
-  /// per search: about the same total time as one search per move.
-  int get reviewBudget => (budget ~/ 2).clamp(500, 5000);
+  /// Each position is searched once, for a third of the analysis budget: a
+  /// review needs a clear verdict per move, not the deepest possible line.
+  int get reviewBudget => (budget ~/ 3).clamp(500, 4000);
   bool everyMove = false;
   bool showBest = false, retrying = false, loaded = false, started = false;
   String? retryNote;

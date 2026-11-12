@@ -1,3 +1,7 @@
-Quieter taps.
-- Buttons and menus no longer click; sound is only for moving pieces
-- Plus recent releases: board and sound tabs, castling and auto-queen options, figurine notation, guided reviews, Android 8 support
+A faster, stronger engine.
+- Game reviews are about twice as fast
+- Analysis uses your phone's fast cores, so results are more accurate in the same time
+- Updated to Stockfish 19
+- Engine resources setting: 1, 2 or 4 threads
+- Earlier reviews refresh when you open them
+- Plus recent releases: quieter taps, board and sound tabs, castling and auto-queen options, figurine notation

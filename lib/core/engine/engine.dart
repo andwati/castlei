@@ -75,8 +75,24 @@ class SearchResult {
 
 class SearchCanceled implements Exception {}
 
+/// Search threads used when the person has not chosen. The engine caps this to
+/// the number of fast cores in the phone, so it is safe on small devices.
+const defaultEngineThreads = 4;
+
+/// Hash size in MB that goes with a thread count.
+int hashFor(int threads) => threads <= 1 ? 64 : 128;
+
 class EngineClient {
-  int threads = 1, hashMb = 64;
+  int threads = defaultEngineThreads, hashMb = hashFor(defaultEngineThreads);
+  // Options last sent to the engine: unchanged ones are not sent again, because
+  // resizing the hash table for a same-size value costs time on every search.
+  final _sent = <String, Object>{};
+  void _option(String name, Object value) {
+    if (_sent[name] == value) return;
+    _sent[name] = value;
+    send('setoption name $name value $value');
+  }
+
   SendPort? _commands;
   Isolate? _isolate;
   ReceivePort? _port;
@@ -112,8 +128,6 @@ class EngineClient {
     final uci = _messages.stream.firstWhere((s) => s == 'uciok');
     send('uci');
     await uci.timeout(const Duration(seconds: 20));
-    send('setoption name Threads value 1');
-    send('setoption name Hash value 64');
     await barrier();
   }
 
@@ -136,6 +150,10 @@ class EngineClient {
     int skill = 20,
     int multiPv = 1,
     String? onlyMove,
+
+    /// False keeps the hash table and history from the previous search, which
+    /// speeds up a run of related positions such as a game review.
+    bool newGame = true,
     void Function(EngineLine)? onLine,
   }) {
     final generation = _generation;
@@ -160,11 +178,11 @@ class EngineClient {
             }
           }
         });
-        send('ucinewgame');
-        send('setoption name Threads value $threads');
-        send('setoption name Hash value $hashMb');
-        send('setoption name Skill Level value $skill');
-        send('setoption name MultiPV value $multiPv');
+        if (newGame) send('ucinewgame');
+        _option('Threads', threads);
+        _option('Hash', hashMb);
+        _option('Skill Level', skill);
+        _option('MultiPV', multiPv);
         await barrier();
         if (generation != _generation) throw SearchCanceled();
         send(

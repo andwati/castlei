@@ -4,6 +4,18 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.9 — 2026-11-12
+
+A faster, stronger engine.
+
+- Game reviews are about twice as fast: each position is analysed once instead of twice.
+- The engine uses several threads on your phone's fast cores, so analysis is more accurate in the same time.
+- Updated to Stockfish 19.
+- The engine resources setting now offers 1, 2 or 4 threads (4 is the default).
+- Reviews of earlier games are refreshed the next time you open them.
+
+Android build 17 (1.1.9+17).
+
 ## 1.1.8 — 2026-11-12
 
 Quieter taps.
