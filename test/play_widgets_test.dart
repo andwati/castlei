@@ -112,4 +112,19 @@ void main() {
     await t.pumpWidget(const SizedBox());
     await t.runAsync(db.close);
   });
+
+  testWidgets('the clock announces its time and whether it is running', (
+    t,
+  ) async {
+    final handle = t.ensureSemantics();
+    await t.pumpWidget(
+      host(const GameClock(label: 'White', value: '4:59', active: true)),
+    );
+    expect(find.bySemanticsLabel('White clock 4:59, running'), findsOneWidget);
+    await t.pumpWidget(
+      host(const GameClock(label: 'Black', value: '0:12', active: false)),
+    );
+    expect(find.bySemanticsLabel('Black clock 0:12'), findsOneWidget);
+    handle.dispose();
+  });
 }

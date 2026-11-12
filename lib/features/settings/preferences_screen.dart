@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/ui/board_style.dart';
 import '../../core/ui/theme.dart';
 
 import '../../core/ui/widgets.dart';
@@ -80,6 +81,44 @@ class _PreferencesState extends State<PreferencesScreen> {
         : ListView(
             padding: pagePadding(context),
             children: [
+              const SectionLabel('Analysis board'),
+              GroupCard(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Evaluation bar'),
+                    subtitle: const Text(
+                      'A bar under the board showing who is better.',
+                    ),
+                    value: BoardStyle.evalBar,
+                    onChanged: (v) async {
+                      await BoardStyle.save(widget.repo, evalBar: v);
+                      setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Suggestion arrow'),
+                    subtitle: const Text(
+                      'An arrow for the engine’s best move.',
+                    ),
+                    value: BoardStyle.suggestionArrow,
+                    onChanged: (v) async {
+                      await BoardStyle.save(widget.repo, suggestionArrow: v);
+                      setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Threat arrow'),
+                    subtitle: const Text(
+                      'A red arrow for what the opponent threatens. Takes a little longer.',
+                    ),
+                    value: BoardStyle.threatArrow,
+                    onChanged: (v) async {
+                      await BoardStyle.save(widget.repo, threatArrow: v);
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ),
               const SectionLabel('Analysis'),
               const _Hint(
                 'How long the engine thinks about each move in a review or hint.',

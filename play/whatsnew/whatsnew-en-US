@@ -1,4 +1,6 @@
-Clearer progress and puzzle feedback.
-- Puzzle feedback sits above the board
-- Training trends in plain words, with improving, steady or slipping arrows
-- Plus recent releases: Android 8 support, guided game reviews, board colours, larger pieces
+More ways to make the board yours.
+- Board and sound has Board, Pieces and Sound tabs with a live preview
+- Choose how you castle, and auto-queen promotions
+- Figurine notation (like ♘f3)
+- Switch the evaluation bar and suggestion arrow off
+- Plus recent releases: Android 8 support, guided reviews, board colours

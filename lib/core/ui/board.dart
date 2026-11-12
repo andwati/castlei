@@ -213,6 +213,25 @@ class _BoardState extends State<ChessBoard> {
     );
   }
 
+  /// Where the piece on [from] may go. With the two-square castling method,
+  /// the king's castling moves are shown on g and c, not on the rooks.
+  Set<Square> _targets(Square from) {
+    final p = widget.position;
+    final out = p.legalMovesOf(from).squares.toSet();
+    if (BoardStyle.castleTwoSquares &&
+        p.board.pieceAt(from)?.role == Role.king) {
+      for (final to in out.toList()) {
+        final target = p.board.pieceAt(to);
+        if (target?.role == Role.rook && target?.color == p.turn) {
+          out
+            ..remove(to)
+            ..add(Square(from.rank * 8 + (to > from ? 6 : 2)));
+        }
+      }
+    }
+    return out;
+  }
+
   Future<void> choose(Square s) async {
     if (widget.drawing) {
       widget.onShape?.call('G${s.name}');
@@ -229,7 +248,9 @@ class _BoardState extends State<ChessBoard> {
           NormalMove(from: from, to: s, promotion: Role.queen),
         );
         if (legal) {
-          final role = await _askPromotion(s, p.turn);
+          final role = BoardStyle.autoQueen
+              ? Role.queen
+              : await _askPromotion(s, p.turn);
           if (role == null || !mounted) return;
           move = NormalMove(from: from, to: s, promotion: role);
         }
@@ -360,7 +381,7 @@ class _BoardState extends State<ChessBoard> {
                           final legal =
                               BoardStyle.legalMoves &&
                               selected != null &&
-                              widget.position.legalMovesOf(selected!).has(sq);
+                              _targets(selected!).contains(sq);
                           final light = (sq.file + sq.rank) % 2 != 0;
                           final pal = BoardStyle.current;
                           final base = BoardStyle.palette == 'pine'

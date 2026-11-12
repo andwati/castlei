@@ -1,3 +1,4 @@
+import '../../core/ui/board_style.dart';
 import '../../core/ui/plural.dart';
 
 import 'package:flutter/material.dart';
@@ -221,7 +222,7 @@ class _MoveStripState extends State<MoveStrip> {
                                       number: i % 2 == 0
                                           ? '${i ~/ 2 + 1}.'
                                           : null,
-                                      san: widget.moves[i].san,
+                                      san: BoardStyle.san(widget.moves[i].san),
                                       badge: badgeFor(
                                         widget.labels[widget.moves[i].id] ?? '',
                                       ),
@@ -282,7 +283,7 @@ Future<void> showMovesSheet(
                       for (var i = 0; i < moves.length; i++)
                         MoveChip(
                           number: i % 2 == 0 ? '${i ~/ 2 + 1}.' : null,
-                          san: moves[i].san,
+                          san: BoardStyle.san(moves[i].san),
                           badge: badgeFor(labels[moves[i].id] ?? ''),
                           selected: moves[i].id == currentId,
                         ),

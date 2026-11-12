@@ -314,8 +314,17 @@ class GameCubit extends Cubit<GameView> {
     emit(const GameView());
   }
 
-  Future<void> analyze({int milliseconds = 3000, int multiPv = 3}) async {
+  /// The opponent's best reply if it were their turn now (a threat), after
+  /// the last [analyze] run with `threats: true`.
+  String? threatMove;
+
+  Future<void> analyze({
+    int milliseconds = 3000,
+    int multiPv = 3,
+    bool threats = false,
+  }) async {
     engine.cancel();
+    threatMove = null;
     final token = ++epoch;
     emit(const GameView(thinking: true));
     final lines = <int, EngineLine>{};
@@ -333,6 +342,20 @@ class GameCubit extends Cubit<GameView> {
       );
       if (token == epoch && !isClosed) {
         emit(GameView(lines: lines.values.toList()));
+      }
+      if (threats && token == epoch && !isClosed && !game.position.isCheck) {
+        final parts = game.position.fen.split(' ');
+        parts[1] = parts[1] == 'w' ? 'b' : 'w';
+        parts[3] = '-';
+        final r = await engine.search(
+          fen: parts.join(' '),
+          moves: const [],
+          milliseconds: min(milliseconds, 1000),
+        );
+        if (token == epoch && !isClosed) {
+          threatMove = r.bestmove;
+          emit(GameView(lines: lines.values.toList()));
+        }
       }
     } catch (e) {
       if (!isClosed) emit(GameView(error: e.toString()));

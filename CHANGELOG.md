@@ -4,6 +4,17 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.7 — 2026-11-12
+
+More ways to make the board yours.
+
+- Board and sound is now three tabs: Board, Pieces and Sound, with a live board on top.
+- Castle with a two-square king move (or onto the rook), and promote to a queen automatically if you like.
+- Figurine notation shows moves as ♘f3 instead of Nf3.
+- The analysis board's evaluation bar and suggestion arrow can be switched off, and a red threat arrow can be switched on, in Analysis and practice.
+
+Android build 15 (1.1.7+15).
+
 ## 1.1.6 — 2026-11-12
 
 Clearer progress and puzzle feedback.

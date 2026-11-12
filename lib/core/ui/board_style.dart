@@ -27,6 +27,14 @@ class BoardStyle {
   /// Slightly larger pieces, and stronger piece contrast.
   static bool magnify = false, contrast = false;
 
+  /// Castle by moving the king two squares (otherwise onto the rook), and
+  /// promote to a queen without asking. Moves are shown as piece letters
+  /// unless [figurine] is on.
+  static bool castleTwoSquares = true, autoQueen = false, figurine = false;
+
+  /// Analysis helpers.
+  static bool evalBar = true, suggestionArrow = true, threatArrow = false;
+
   /// Bumped on every change so open boards can repaint.
   static final changes = ValueNotifier<int>(0);
 
@@ -39,6 +47,12 @@ class BoardStyle {
     highlightLast = await repo.preference('highlightLast', true) as bool;
     magnify = await repo.preference('magnifyPieces', false) as bool;
     contrast = await repo.preference('pieceContrast', false) as bool;
+    castleTwoSquares = await repo.preference('castleTwo', true) as bool;
+    autoQueen = await repo.preference('autoQueen', false) as bool;
+    figurine = await repo.preference('figurine', false) as bool;
+    evalBar = await repo.preference('evalBar', true) as bool;
+    suggestionArrow = await repo.preference('suggestionArrow', true) as bool;
+    threatArrow = await repo.preference('threatArrow', false) as bool;
     changes.value++;
   }
 
@@ -49,6 +63,12 @@ class BoardStyle {
     bool? highlightLast,
     bool? magnify,
     bool? contrast,
+    bool? castleTwoSquares,
+    bool? autoQueen,
+    bool? figurine,
+    bool? evalBar,
+    bool? suggestionArrow,
+    bool? threatArrow,
   }) async {
     if (palette != null) {
       BoardStyle.palette = palette;
@@ -70,6 +90,34 @@ class BoardStyle {
       BoardStyle.contrast = contrast;
       await repo.setPreference('pieceContrast', contrast);
     }
+    Future<void> flag(String key, bool? v, void Function(bool) apply) async {
+      if (v == null) return;
+      apply(v);
+      await repo.setPreference(key, v);
+    }
+
+    await flag(
+      'castleTwo',
+      castleTwoSquares,
+      (v) => BoardStyle.castleTwoSquares = v,
+    );
+    await flag('autoQueen', autoQueen, (v) => BoardStyle.autoQueen = v);
+    await flag('figurine', figurine, (v) => BoardStyle.figurine = v);
+    await flag('evalBar', evalBar, (v) => BoardStyle.evalBar = v);
+    await flag(
+      'suggestionArrow',
+      suggestionArrow,
+      (v) => BoardStyle.suggestionArrow = v,
+    );
+    await flag('threatArrow', threatArrow, (v) => BoardStyle.threatArrow = v);
     changes.value++;
+  }
+
+  /// "Nf3" as "♘f3" when figurine notation is on.
+  static String san(String san) {
+    if (!figurine || san.isEmpty) return san;
+    const glyphs = {'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘'};
+    final g = glyphs[san[0]];
+    return g == null ? san : '$g${san.substring(1)}';
   }
 }

@@ -1,3 +1,5 @@
+import '../../core/ui/board_style.dart';
+
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -117,7 +119,8 @@ class ReviewMove {
   int get moveNumber => (ply + 1) ~/ 2;
 
   /// "5. Qe2" for White, "5... dxc4" for Black.
-  String get numbered => '$moveNumber${whiteMoved ? '.' : '...'} $san';
+  String get numbered =>
+      '$moveNumber${whiteMoved ? '.' : '...'} ${BoardStyle.san(san)}';
 }
 
 /// The review of a whole game: every analysed move and the totals.

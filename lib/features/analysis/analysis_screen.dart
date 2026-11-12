@@ -1,3 +1,5 @@
+import '../../core/ui/board_style.dart';
+
 import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -244,10 +246,18 @@ class _AnalysisScreenState extends State<AnalysisScreen>
                   if (haptics) HapticFeedback.lightImpact();
                 },
                 drawing: drawing,
-                shapes: [...?current?.shapes],
+                shapes: [
+                  ...?current?.shapes,
+                  if (BoardStyle.threatArrow &&
+                      cubit.threatMove != null &&
+                      cubit.threatMove!.length >= 4)
+                    'R${cubit.threatMove!.substring(0, 4)}',
+                ],
                 onShape: annotate,
                 onMove: (m) => cubit.move(m),
-                arrow: state.lines.firstOrNull?.pv.firstOrNull,
+                arrow: BoardStyle.suggestionArrow
+                    ? state.lines.firstOrNull?.pv.firstOrNull
+                    : null,
               ),
               PlayerRow(
                 game: g,
@@ -257,7 +267,7 @@ class _AnalysisScreenState extends State<AnalysisScreen>
                 study: true,
               ),
               const SizedBox(height: 8),
-              if (state.lines.isNotEmpty)
+              if (state.lines.isNotEmpty && BoardStyle.evalBar)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
@@ -327,8 +337,11 @@ class _AnalysisScreenState extends State<AnalysisScreen>
                     onChanged: (v) => setState(() => multiPv = v!),
                   ),
                   FilledButton(
-                    onPressed: () =>
-                        cubit.analyze(milliseconds: budget, multiPv: multiPv),
+                    onPressed: () => cubit.analyze(
+                      milliseconds: budget,
+                      multiPv: multiPv,
+                      threats: BoardStyle.threatArrow,
+                    ),
                     child: const Text('Analyze'),
                   ),
                   IconButton(
@@ -457,7 +470,7 @@ class _AnalysisScreenState extends State<AnalysisScreen>
                   for (var i = 0; i < path.length; i++)
                     MoveChip(
                       number: i % 2 == 0 ? '${i ~/ 2 + 1}.' : null,
-                      san: path[i].san,
+                      san: BoardStyle.san(path[i].san),
                       badge: badgeFor(_labels[path[i].id] ?? ''),
                       selected: path[i].id == g.current,
                       onTap: () => cubit.navigate(path[i].id),
@@ -466,7 +479,7 @@ class _AnalysisScreenState extends State<AnalysisScreen>
               ),
               for (final n in g.children(g.current))
                 ListTile(
-                  title: Text(n.san),
+                  title: Text(BoardStyle.san(n.san)),
                   subtitle: Text(n.comment, maxLines: 1),
                   trailing: (g.source == 'study' || !g.mainline.contains(n))
                       ? IconButton(
@@ -545,7 +558,7 @@ class _AnalysisScreenState extends State<AnalysisScreen>
                         ListTile(
                           dense: true,
                           title: Text(
-                            '${(p.ply + 1) ~/ 2}${p.whiteMoved ? '.' : '...'} ${p.san}${badgeFor(p.label)}',
+                            '${(p.ply + 1) ~/ 2}${p.whiteMoved ? '.' : '...'} ${BoardStyle.san(p.san)}${badgeFor(p.label)}',
                           ),
                           subtitle: Text('${p.label} · ${p.evalText}'),
                           selected: p.nodeId == g.current,
