@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/chess/engine_opponents.dart';
 import '../../core/chess/model.dart';
 import '../../core/chess/openings.dart';
 import '../../core/diagnostics/analytics.dart';
@@ -10,14 +11,15 @@ import '../../core/engine/engine.dart';
 import '../../core/notifications/notifications.dart';
 import '../../core/storage/repository.dart';
 import '../../core/ui/board.dart';
-import '../../core/ui/board_workspace.dart';
+import '../../core/ui/engine_avatar.dart';
 import '../../core/ui/sfx.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
-import '../analysis/analysis_screen.dart';
 import '../analysis/eval_graph.dart';
+import '../analysis/analysis_screen.dart';
 import 'game_common.dart';
 import 'game_cubit.dart';
+import 'play_widgets.dart';
 
 /// A live game against the engine.
 class PlayScreen extends StatefulWidget {
@@ -45,6 +47,7 @@ class _PlayScreenState extends State<PlayScreen>
 
   late final GameCubit cubit;
   int hintLevel = 0;
+  bool _offeredReminders = false;
   Map<String, String> _labels = {};
   final Set<String> _lowTimeWarned = {};
 
@@ -62,6 +65,10 @@ class _PlayScreenState extends State<PlayScreen>
       if (mounted) setState(() {});
     });
     Notifications.cancelResume();
+    // A game opens running; it only waits for the player after they leave it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.game.result == '*') cubit.resume();
+    });
     // Don't interrupt a game with in-app announcements.
     Analytics.suppressMessages(true);
     Analytics.screen('game');
@@ -121,14 +128,190 @@ class _PlayScreenState extends State<PlayScreen>
     );
   }
 
+  Widget _bar(ChessGame g, GameView state, Side side) {
+    final human = side == cubit.human;
+    final over = g.result != '*';
+    final white = side == Side.white;
+    final ms = white ? cubit.white : cubit.black;
+    final turn = g.position.turn == side;
+    return PlayerBar(
+      leading: human
+          ? Text(white ? '♔' : '♚', style: const TextStyle(fontSize: 28))
+          : EngineAvatar(
+              opponent: EngineOpponent.fromSettings(g.settings),
+              size: 40,
+            ),
+      name: human
+          ? 'You'
+          : 'Stockfish · ${EngineOpponent.fromSettings(g.settings).label}',
+      captures: capturesBy(g.at(null), g.position, side),
+      capturedWhite: !white,
+      active: !over && !state.paused && turn,
+      inCheck: g.position.isCheck && turn,
+      thinking: !human && state.thinking,
+      clock: cubit.timed
+          ? GameClock(
+              label: white ? 'White' : 'Black',
+              value: clockText(ms),
+              low: ms < 20000,
+              active: !state.paused && !over && turn,
+            )
+          : null,
+    );
+  }
+
+  Future<void> _hint() async {
+    setState(() => hintLevel = (hintLevel + 1).clamp(1, 2));
+    await cubit.hint();
+  }
+
+  Future<void> _takeBack() async {
+    await cubit.undo();
+    hintLevel = 0;
+    if (mounted && widget.game.result == '*') await cubit.resume();
+  }
+
+  void _review() => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => AnalysisScreen(
+        game: widget.game,
+        repo: widget.repo,
+        engine: widget.engine,
+      ),
+    ),
+  );
+
+  Future<void> _claimWithMove() async {
+    final g = widget.game;
+    final move = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Claim with intended move'),
+        children: [
+          for (final m in cubit.intendedClaims)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, m.uci),
+              child: Text(g.position.makeSan(m).$2),
+            ),
+        ],
+      ),
+    );
+    if (move != null) {
+      await cubit.claimIntended(
+        cubit.intendedClaims.firstWhere((m) => m.uci == move),
+      );
+    }
+  }
+
+  Widget _bottom(ChessGame g, GameView state) {
+    if (g.result != '*') {
+      final won = g.result == (cubit.human == Side.white ? '1-0' : '0-1');
+      return ResultPanel(
+        headline: g.result == '1/2-1/2'
+            ? 'Draw'
+            : won
+            ? 'You won'
+            : 'You lost',
+        reason: '${g.settings['reason'] ?? 'Finished'}',
+        won: won || g.result == '1/2-1/2',
+        onReview: _review,
+        onRematch: _rematch,
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!cubit.canClaim && cubit.intendedClaims.isNotEmpty)
+          TextButton(
+            onPressed: _claimWithMove,
+            child: const Text('Claim with move'),
+          ),
+        if (cubit.canClaim)
+          TextButton(onPressed: cubit.claim, child: const Text('Claim draw')),
+        if (state.paused) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Paused · your progress is saved',
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: cubit.resume,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Resume'),
+          ),
+        ] else
+          ToolRow(
+            children: [
+              ToolButton(
+                icon: Icons.undo_rounded,
+                label: 'Take back',
+                onTap: g.current == null || state.thinking ? null : _takeBack,
+              ),
+              ToolButton(
+                icon: Icons.lightbulb_outline_rounded,
+                label: 'Hint',
+                onTap: cubit.canMove ? _hint : null,
+              ),
+              ToolButton(
+                icon: Icons.flag_outlined,
+                label: 'Resign',
+                danger: true,
+                onTap: _resign,
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _board(ChessGame g, GameView state, StudyNode? current, double side) =>
+      Center(
+        child: SizedBox(
+          width: side,
+          child: ChessBoard(
+            position: g.position,
+            lastMove: current?.uci,
+            coordinates: coordinates,
+            flipped: flipped,
+            enabled: cubit.canMove,
+            onIllegalMove: () {
+              if (haptics) HapticFeedback.lightImpact();
+            },
+            shapes: [
+              if (state.hint != null && hintLevel == 1)
+                'Y${state.hint!.substring(0, 2)}',
+            ],
+            onMove: (m) {
+              hintLevel = 0;
+              cubit.move(m);
+            },
+            arrow: state.hint != null && hintLevel > 1 ? state.hint : null,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) => BlocBuilder<GameCubit, GameView>(
     bloc: cubit,
     builder: (context, state) {
       final g = widget.game;
       final current = g.nodes.where((n) => n.id == g.current).firstOrNull;
+      final over = g.result != '*';
       announceMove(g, current);
-      if (!state.paused && g.result == '*' && cubit.timed) {
+      if (over && !_offeredReminders) {
+        _offeredReminders = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Notifications.offerReminders(context, widget.repo);
+        });
+      }
+      if (!state.paused && !over && cubit.timed) {
         for (final pair in [('white', cubit.white), ('black', cubit.black)]) {
           if (pair.$2 > 0 && pair.$2 < 20000 && _lowTimeWarned.add(pair.$1)) {
             WidgetsBinding.instance.addPostFrameCallback(
@@ -137,259 +320,161 @@ class _PlayScreenState extends State<PlayScreen>
           }
         }
       }
+      final opening = Openings.forLine(g, g.current);
+      final turnLabel = over
+          ? ''
+          : '${g.position.turn == Side.white ? 'White' : 'Black'} to move'
+                '${g.position.isCheck ? ', in check' : ''}';
       return Scaffold(
         appBar: AppBar(
-          title: Text(g.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          actions: [
-            IconButton(
-              tooltip: 'Copy PGN',
-              onPressed: () =>
-                  Clipboard.setData(ClipboardData(text: g.exportPgn())),
-              icon: const Icon(Icons.ios_share),
+          title: Semantics(
+            label: opening == null ? 'Game' : 'Opening: ${opening.$2}',
+            child: Text(
+              opening?.$2 ?? 'Game',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              tooltip: 'Flip board',
-              onPressed: () => setState(() => flipped = !flipped),
-              icon: const Icon(Icons.flip),
+          ),
+          actions: [
+            if (cubit.timed && !over && !state.paused)
+              IconButton(
+                tooltip: 'Pause',
+                onPressed: cubit.pause,
+                icon: const Icon(Icons.pause),
+              ),
+            PopupMenuButton<String>(
+              tooltip: 'More',
+              onSelected: (v) {
+                switch (v) {
+                  case 'flip':
+                    setState(() => flipped = !flipped);
+                  case 'pgn':
+                    Clipboard.setData(ClipboardData(text: g.exportPgn()));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('PGN copied')));
+                  case 'pause':
+                    state.paused ? cubit.resume() : cubit.pause();
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'flip', child: Text('Flip board')),
+                if (!over)
+                  PopupMenuItem(
+                    value: 'pause',
+                    child: Text(state.paused ? 'Resume game' : 'Pause game'),
+                  ),
+                const PopupMenuItem(value: 'pgn', child: Text('Copy PGN')),
+              ],
             ),
           ],
         ),
-        body: SafeArea(
-          child: BoardWorkspace(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  StatusChip(
-                    'Stockfish · ${g.settings['level'] ?? 'Medium'}',
-                    icon: Icons.memory,
+        bottomNavigationBar: Material(
+          color: context.colors.surface,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: _bottom(g, state),
+            ),
+          ),
+        ),
+        body: LayoutBuilder(
+          builder: (context, box) {
+            final scale = MediaQuery.textScalerOf(context).scale(1);
+            final wide = box.maxWidth >= 840 && scale <= 1.5;
+            final column = wide
+                ? (box.maxWidth * .52).clamp(320.0, 620.0)
+                : box.maxWidth;
+            final chrome = 196 * scale.clamp(1.0, 1.6);
+            final side = (column - 32)
+                .clamp(0.0, 640.0)
+                .clamp(0.0, (box.maxHeight - chrome).clamp(220.0, 640.0));
+            final moves = g.mainline;
+            final board = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  liveRegion: true,
+                  label: turnLabel,
+                  child: const SizedBox.shrink(),
+                ),
+                _bar(g, state, flipped ? Side.white : Side.black),
+                _board(g, state, current, side),
+                _bar(g, state, flipped ? Side.black : Side.white),
+                const SizedBox(height: 8),
+                if (state.error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Engine paused: ${state.error}',
+                      style: TextStyle(color: context.colors.error),
+                    ),
                   ),
-                ],
-              ),
-              TurnCue(position: g.position),
-              PlayerRow(
-                game: g,
-                cubit: cubit,
-                state: state,
-                side: flipped ? Side.white : Side.black,
-                study: false,
-              ),
-              Builder(
-                builder: (_) {
-                  final o = Openings.forLine(g, g.current);
-                  if (o == null) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Semantics(
-                      label: 'Opening: ${o.$2}',
-                      child: Text(
-                        '${o.$1} · ${o.$2}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.text.bodyMedium?.copyWith(
-                          color: context.colors.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                if (!wide)
+                  MoveStrip(
+                    moves: moves,
+                    currentId: g.current,
+                    labels: _labels,
+                    onOpen: () => showMovesSheet(
+                      context,
+                      moves: moves,
+                      currentId: g.current,
+                      labels: _labels,
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              ChessBoard(
-                position: g.position,
-                lastMove: current?.uci,
-                coordinates: coordinates,
-                flipped: flipped,
-                enabled: cubit.canMove,
-                onIllegalMove: () {
-                  if (haptics) HapticFeedback.lightImpact();
-                },
-                shapes: [
-                  if (state.hint != null && hintLevel == 1)
-                    'Y${state.hint!.substring(0, 2)}',
-                ],
-                onMove: (m) {
-                  hintLevel = 0;
-                  cubit.move(m);
-                },
-                arrow: state.hint != null && hintLevel > 1 ? state.hint : null,
-              ),
-              PlayerRow(
-                game: g,
-                cubit: cubit,
-                state: state,
-                side: flipped ? Side.black : Side.white,
-                study: false,
-              ),
-              const SizedBox(height: 8),
-              if (state.error != null)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text('Engine paused: ${state.error}'),
                   ),
-                ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: g.result != '*'
-                      ? context.colors.secondaryContainer
-                      : state.thinking
-                      ? context.colors.surfaceContainerHigh
-                      : context.colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(Corner.md),
-                ),
-                child: Row(
-                  children: [
-                    if (state.thinking)
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.5),
-                      )
-                    else
-                      Icon(
-                        g.result != '*'
-                            ? Icons.flag_rounded
-                            : state.paused
-                            ? Icons.pause_circle_outline
-                            : Icons.touch_app_outlined,
-                      ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        g.result == '*'
-                            ? (state.thinking
-                                  ? 'Stockfish is thinking…'
-                                  : state.paused
-                                  ? 'Game paused — your progress is saved'
-                                  : '${cubit.human == Side.white ? 'White' : 'Black'} · Your move')
-                            : '${g.result == '1/2-1/2'
-                                  ? 'Draw'
-                                  : g.result == (cubit.human == Side.white ? '1-0' : '0-1')
-                                  ? 'You won'
-                                  : 'You lost'} · ${g.settings['reason'] ?? 'Finished'}',
-                        style: context.text.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              ActionStack(
-                children: [
-                  if (g.result == '*')
-                    FilledButton.icon(
-                      onPressed: state.paused ? cubit.resume : cubit.pause,
-                      icon: Icon(state.paused ? Icons.play_arrow : Icons.pause),
-                      label: Text(state.paused ? 'Resume' : 'Pause'),
-                    ),
-                  if (g.result == '*')
-                    ToolRow(
+              ],
+            );
+            return SafeArea(
+              bottom: false,
+              child: wide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ToolButton(
-                          icon: Icons.undo_rounded,
-                          label: 'Take back',
-                          onTap: g.current == null ? null : cubit.undo,
+                        SizedBox(
+                          width: column,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(16),
+                            child: board,
+                          ),
                         ),
-                        ToolButton(
-                          icon: Icons.lightbulb_outline_rounded,
-                          label: 'Hint',
-                          onTap: () async {
-                            setState(
-                              () => hintLevel = (hintLevel + 1).clamp(1, 2),
-                            );
-                            await cubit.hint();
-                          },
-                        ),
-                        ToolButton(
-                          icon: Icons.flag_outlined,
-                          label: 'Resign',
-                          danger: true,
-                          onTap: _resign,
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Moves', style: context.text.titleLarge),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  children: [
+                                    for (var i = 0; i < moves.length; i++)
+                                      MoveChip(
+                                        number: i % 2 == 0
+                                            ? '${i ~/ 2 + 1}.'
+                                            : null,
+                                        san: moves[i].san,
+                                        badge: badgeFor(
+                                          _labels[moves[i].id] ?? '',
+                                        ),
+                                        selected: moves[i].id == g.current,
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: board,
                     ),
-                  if (!cubit.canClaim && cubit.intendedClaims.isNotEmpty)
-                    TextButton(
-                      onPressed: () async {
-                        final move = await showDialog<String>(
-                          context: context,
-                          builder: (ctx) => SimpleDialog(
-                            title: const Text('Claim with intended move'),
-                            children: [
-                              for (final m in cubit.intendedClaims)
-                                SimpleDialogOption(
-                                  onPressed: () => Navigator.pop(ctx, m.uci),
-                                  child: Text(g.position.makeSan(m).$2),
-                                ),
-                            ],
-                          ),
-                        );
-                        if (move != null) {
-                          await cubit.claimIntended(
-                            cubit.intendedClaims.firstWhere(
-                              (m) => m.uci == move,
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text('Claim with move'),
-                    ),
-                  if (cubit.canClaim)
-                    TextButton(
-                      onPressed: cubit.claim,
-                      child: const Text('Claim draw'),
-                    ),
-                ],
-              ),
-              if (g.result != '*')
-                FilledButton.tonal(
-                  onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AnalysisScreen(
-                        game: g,
-                        repo: widget.repo,
-                        engine: widget.engine,
-                      ),
-                    ),
-                  ),
-                  child: const Text('Review game'),
-                ),
-              if (g.result != '*') const SizedBox(height: 12),
-              if (g.result != '*')
-                TextButton.icon(
-                  onPressed: _rematch,
-                  icon: const Icon(Icons.replay),
-                  label: const Text('Play again'),
-                ),
-              const Divider(),
-              Text('MOVES', style: Theme.of(context).textTheme.labelLarge),
-              Wrap(
-                spacing: 4,
-                runSpacing: 8,
-                children: [
-                  for (var i = 0; i < g.mainline.length; i++)
-                    MoveChip(
-                      number: i % 2 == 0 ? '${i ~/ 2 + 1}.' : null,
-                      san: g.mainline[i].san,
-                      badge: badgeFor(_labels[g.mainline[i].id] ?? ''),
-                      selected: g.mainline[i].id == g.current,
-                    ),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         ),
       );
     },

@@ -341,7 +341,9 @@ class GameCubit extends Cubit<GameView> {
 
   Future<void> hint() async {
     if (state.hint != null) {
-      emit(GameView(hint: state.hint, lines: state.lines));
+      emit(
+        GameView(hint: state.hint, lines: state.lines, paused: state.paused),
+      );
       return;
     }
     await pause();
@@ -355,7 +357,10 @@ class GameCubit extends Cubit<GameView> {
         moves: game.path(game.current).map((n) => n.uci).toList(),
         milliseconds: 1000,
       );
-      if (!isClosed) emit(GameView(hint: r.bestmove));
+      if (isClosed) return;
+      // A hint is a look at the board, not a pause: the game carries on.
+      if (game.result == '*') watch.start();
+      emit(GameView(hint: r.bestmove, paused: game.result != '*'));
     } catch (e) {
       if (!isClosed) emit(GameView(error: e.toString()));
     }

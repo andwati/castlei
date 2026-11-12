@@ -202,3 +202,70 @@ Future<ChessGame> newRematch(Repository repo, ChessGame old) async {
   await repo.save(game);
   return game;
 }
+
+const _pieceValue = {
+  Role.pawn: 1,
+  Role.knight: 3,
+  Role.bishop: 3,
+  Role.rook: 5,
+  Role.queen: 9,
+};
+
+/// Pieces one side has captured so far, worth in pawns, and how far ahead in
+/// material that side is (0 when level or behind).
+class Captures {
+  const Captures(this.taken, this.lead);
+  final List<Role> taken;
+  final int lead;
+}
+
+/// Compares [now] with [start]: what [taker] has captured, and their material
+/// lead. Promotions can make a side own more of a piece than it started with;
+/// those never count as captures.
+Captures capturesBy(Position start, Position now, Side taker) {
+  List<Role> lost(Side victim) {
+    final before = start.board.materialCount(victim);
+    final after = now.board.materialCount(victim);
+    // Each piece gained beyond the starting count is a promoted pawn, which
+    // left the board without being captured.
+    var promoted = 0;
+    for (final role in _pieceValue.keys) {
+      if (role == Role.pawn) continue;
+      promoted += (after[role]! - before[role]!).clamp(0, 8);
+    }
+    return [
+      for (final role in _pieceValue.keys.toList().reversed)
+        for (
+          var i = 0;
+          i <
+              (before[role]! -
+                      after[role]! -
+                      (role == Role.pawn ? promoted : 0))
+                  .clamp(0, 8);
+          i++
+        )
+          role,
+    ];
+  }
+
+  int worth(Side side) {
+    var total = 0;
+    final count = now.board.materialCount(side);
+    for (final entry in _pieceValue.entries) {
+      total += count[entry.key]! * entry.value;
+    }
+    return total;
+  }
+
+  final taken = lost(taker.opposite);
+  return Captures(taken, (worth(taker) - worth(taker.opposite)).clamp(0, 99));
+}
+
+String roleGlyph(Role role, {required bool white}) => switch (role) {
+  Role.pawn => white ? '♙' : '♟',
+  Role.knight => white ? '♘' : '♞',
+  Role.bishop => white ? '♗' : '♝',
+  Role.rook => white ? '♖' : '♜',
+  Role.queen => white ? '♕' : '♛',
+  Role.king => '',
+};
