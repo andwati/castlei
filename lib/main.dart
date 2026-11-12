@@ -20,6 +20,7 @@ import 'core/cloud/cloud_backup.dart';
 import 'core/cloud/entitlements.dart';
 import 'core/cloud/remote_config.dart';
 import 'core/notifications/notifications.dart';
+import 'core/update/play_update.dart';
 import 'features/settings/settings_screen.dart';
 
 import 'package:quick_actions/quick_actions.dart';
@@ -169,6 +170,9 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _taps = Notifications.taps.stream.listen(_onNotificationTap);
     _setupShortcuts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) PlayUpdate.check(ScaffoldMessenger.of(context));
+    });
     // Remote Config arrives asynchronously; check a couple of times early on.
     _bannerTimers = [
       for (final seconds in [3, 12])
