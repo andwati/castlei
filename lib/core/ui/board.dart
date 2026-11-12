@@ -7,6 +7,14 @@ import 'package:dartchess/dartchess.dart';
 
 import 'theme.dart';
 
+/// A small badge on a square, e.g. a move-quality mark in a game review. The
+/// glyph carries the meaning; the colour only reinforces it.
+class BoardMark {
+  const BoardMark(this.glyph, this.color, {this.label = ''});
+  final String glyph, label;
+  final Color color;
+}
+
 class ChessBoard extends StatefulWidget {
   const ChessBoard({
     super.key,
@@ -21,6 +29,7 @@ class ChessBoard extends StatefulWidget {
     this.coordinates = true,
     this.lastMove,
     this.onIllegalMove,
+    this.marks = const {},
   });
   final Position position;
   final VoidCallback? onIllegalMove;
@@ -29,6 +38,9 @@ class ChessBoard extends StatefulWidget {
   final List<String> shapes;
   final void Function(String)? onShape;
   final String? arrow, lastMove;
+
+  /// Badges to draw in a square's top-right corner, keyed by square name.
+  final Map<String, BoardMark> marks;
   @override
   State<ChessBoard> createState() => _BoardState();
 }
@@ -481,6 +493,53 @@ class _BoardState extends State<ChessBoard> {
                       ], widget.flipped),
                     ),
                   ),
+                  for (final e in widget.marks.entries)
+                    Builder(
+                      builder: (_) {
+                        final sq = Square.parse(e.key);
+                        if (sq == null) return const SizedBox.shrink();
+                        final d = size * .42;
+                        final col = widget.flipped ? 7 - sq.file : sq.file;
+                        final row = widget.flipped ? sq.rank : 7 - sq.rank;
+                        return Positioned(
+                          left: (col + 1) * size - d * .85,
+                          top: row * size - d * .15,
+                          width: d,
+                          height: d,
+                          child: IgnorePointer(
+                            child: Semantics(
+                              label: e.value.label,
+                              child: ExcludeSemantics(
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: e.value.color,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: size * .025,
+                                    ),
+                                  ),
+                                  child: FittedBox(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(d * .12),
+                                      child: Text(
+                                        e.value.glyph,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
