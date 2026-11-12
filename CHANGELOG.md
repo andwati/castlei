@@ -4,6 +4,19 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.3 — 2026-11-12
+
+A guided review of every game.
+
+- Review a finished game step by step: it analyses on its own with a progress bar and a live board.
+- A short summary first: a plain sentence about your game, accuracy for you and Stockfish, and a graph.
+- Walk through your mistakes with Next: each one is marked on the board and explained in plain words.
+- Show the better move as an arrow, or try again and find it yourself.
+- Reviews keep going if another screen uses the engine, and say so clearly if one is interrupted.
+- Your full analysis workspace is still one tap away under Explore this game.
+
+Android build 11 (1.1.3+11).
+
 ## 1.1.2 — 2026-11-12
 
 A calmer game screen and smarter updates.

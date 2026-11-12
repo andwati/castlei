@@ -1,7 +1,6 @@
-A calmer game screen and smarter updates.
-- Cleaner game screen: the board comes first, with captures, turn and clocks on the player bars
-- Your game's moves in a one-line strip; tap it to see them all
-- Review is now the main button when a game ends
-- Fairer game reviews: fewer moves wrongly marked uncertain
-- Reminders are only offered after you finish a game or puzzle, with an explanation first
-- Castlei can now offer you an update through Google Play
+A guided review of every game.
+- Review a finished game step by step, with a progress bar while it analyses
+- A short summary first: accuracy for you and Stockfish, and a graph
+- Walk through your mistakes with Next, each marked on the board and explained simply
+- Show the better move as an arrow, or try again to find it yourself
+- Your full analysis workspace is still there under Explore this game
