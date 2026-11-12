@@ -6,7 +6,8 @@ import 'package:castlei/core/ui/theme.dart';
 import 'package:castlei/core/chess/model.dart';
 import 'package:castlei/core/engine/engine.dart';
 import 'package:castlei/core/ui/widgets.dart';
-import 'package:castlei/features/play/game_screen.dart';
+import 'package:castlei/features/analysis/analysis_screen.dart';
+import 'package:castlei/features/play/play_screen.dart';
 import 'package:castlei/features/learn/lesson_screen.dart';
 import 'package:castlei/features/learn/lessons.dart';
 import 'package:castlei/features/learn/coordinates.dart';
@@ -143,13 +144,19 @@ void main() {
                 size: Size(320, 850),
                 textScaler: TextScaler.linear(2),
               ),
-              child: GameScreen(
-                key: ValueKey(study),
-                game: game,
-                repo: repo,
-                engine: engine,
-                study: study,
-              ),
+              child: study
+                  ? AnalysisScreen(
+                      key: ValueKey(study),
+                      game: game,
+                      repo: repo,
+                      engine: engine,
+                    )
+                  : PlayScreen(
+                      key: ValueKey(study),
+                      game: game,
+                      repo: repo,
+                      engine: engine,
+                    ),
             ),
           ),
         );

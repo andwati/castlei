@@ -34,7 +34,8 @@ import 'core/storage/backup.dart';
 import 'core/engine/engine.dart';
 import 'core/ui/theme.dart';
 import 'core/ui/widgets.dart';
-import 'features/play/game_screen.dart';
+import 'features/play/play_screen.dart';
+import 'features/analysis/analysis_screen.dart';
 import 'features/analysis/position_editor.dart';
 import 'features/puzzles/training_screen.dart';
 import 'features/puzzles/training.dart';
@@ -270,12 +271,9 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GameScreen(
-          game: g,
-          repo: widget.repo,
-          engine: widget.engine,
-          study: study,
-        ),
+        builder: (_) => study
+            ? AnalysisScreen(game: g, repo: widget.repo, engine: widget.engine)
+            : PlayScreen(game: g, repo: widget.repo, engine: widget.engine),
       ),
     );
     if (mounted) setState(() {});
@@ -1176,11 +1174,10 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                                   await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => GameScreen(
+                                      builder: (_) => AnalysisScreen(
                                         game: game,
                                         repo: widget.repo,
                                         engine: widget.engine,
-                                        study: true,
                                       ),
                                     ),
                                   );
