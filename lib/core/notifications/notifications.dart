@@ -3,6 +3,17 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart'
+    show
+        AlertDialog,
+        BuildContext,
+        Icon,
+        Icons,
+        FilledButton,
+        Navigator,
+        Text,
+        TextButton,
+        showDialog;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -146,12 +157,52 @@ class Notifications {
         false;
   }
 
-  /// Contextual one-time prompt, e.g. after the first finished game.
-  static Future<void> maybePromptOnce(Repository repo) async {
+  /// Whether it is time to offer reminders: notifications work here, the user
+  /// has not been asked before and has not already allowed them.
+  static Future<bool> shouldOffer(Repository repo) async {
     // A system permission dialog would stall automated test runs.
-    if (!ready || runningUnderTest) return;
-    if (await repo.preference('notifPrompted', false) == true) return;
+    if (!ready || runningUnderTest) return false;
+    if (await repo.preference('notifPrompted', false) == true) return false;
+    return !await permissionGranted();
+  }
+
+  /// One-time, contextual offer, e.g. after the first finished game or puzzle.
+  /// Explains what the reminders are for before the system prompt appears, and
+  /// never shows that prompt unless the user agrees.
+  static Future<void> offerReminders(
+    BuildContext context,
+    Repository repo,
+  ) async {
+    if (!await shouldOffer(repo)) return;
     await repo.setPreference('notifPrompted', true);
+    if (!context.mounted) return;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        icon: const Icon(Icons.notifications_active_outlined),
+        title: const Text('Gentle reminders?'),
+        content: const Text(
+          'Castlei can nudge you when practice is due: a drill that is ready '
+          'to review, the daily puzzle, or a game you left unfinished. At most '
+          'one reminder at a time, and never while you are playing.\n\n'
+          'You can change this any time in Settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Turn on'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true) {
+      Analytics.log('notifications_permission', {'result': 'declined_offer'});
+      return;
+    }
     if (await ensurePermission()) {
       Analytics.log('notifications_permission', {'result': 'granted'});
       await reschedule(repo);

@@ -83,7 +83,6 @@ class GameCubit extends Cubit<GameView> {
           'difficulty': '${game.settings['level'] ?? ''}',
         });
         Notifications.cancelResume();
-        Notifications.maybePromptOnce(repo);
         CloudBackup.scheduleSoon();
       }
     }

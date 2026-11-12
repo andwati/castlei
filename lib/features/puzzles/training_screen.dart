@@ -197,9 +197,9 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
       'hints': hints,
     });
     // Reschedule reminders around the new schedule; ask for permission once.
-    Notifications.maybePromptOnce(widget.repo);
     Notifications.reschedule(widget.repo);
     if (mounted) setState(() {});
+    if (mounted) Notifications.offerReminders(context, widget.repo);
   }
 
   Future<void> move(Move m) async {
