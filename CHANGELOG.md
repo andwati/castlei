@@ -12,6 +12,7 @@ A guided review of every game.
 - A short summary first: a plain sentence about your game, accuracy for you and Stockfish, and a graph.
 - Walk through your mistakes with Next: each one is marked on the board and explained in plain words.
 - Show the better move as an arrow, or try again and find it yourself.
+- Reviews are about twice as fast, can step through every move (not just mistakes), and can be shared as a short summary.
 - Reviews keep going if another screen uses the engine, and say so clearly if one is interrupted.
 - Your full analysis workspace is still one tap away under Explore this game.
 - Puzzles: a wrong move is marked on the board with a Retry button, hints come in two steps (the piece, then the arrow), and Reveal draws the solution.
@@ -24,6 +25,7 @@ A guided review of every game.
 - New Board and sound settings page with a live board: six board colour sets, legal-move dots, last-move highlight, coordinates, sounds and vibration, each with a one-line explanation.
 - Analysis and practice settings explain what each option does.
 - Your progress: a summary for the chosen period and local milestones (first game, 25 puzzles and more).
+- The analysis board's review button now opens the guided review.
 
 Android build 11 (1.1.3+11).
 

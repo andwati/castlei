@@ -1,3 +1,4 @@
+import 'package:share_plus/share_plus.dart';
 import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -59,6 +60,11 @@ class _ReviewScreenState extends State<ReviewScreen>
   List<ReviewPoint> points = [];
   List<int> stops = [];
   int index = 0;
+
+  /// Each move is searched twice, so a review uses half the analysis budget
+  /// per search: about the same total time as one search per move.
+  int get reviewBudget => (budget ~/ 2).clamp(500, 5000);
+  bool everyMove = false;
   bool showBest = false, retrying = false, loaded = false, started = false;
   String? retryNote;
 
@@ -81,7 +87,7 @@ class _ReviewScreenState extends State<ReviewScreen>
   void _start() {
     if (!mounted || started) return;
     started = true;
-    cubit.review(budget);
+    cubit.review(budget, searchMs: reviewBudget);
   }
 
   @override
@@ -109,6 +115,32 @@ class _ReviewScreenState extends State<ReviewScreen>
       phase = _Phase.summary;
     });
     Analytics.log('review_completed', {'moves': r.moves.length});
+  }
+
+  /// Toggles between stopping on mistakes only and stepping through every move.
+  void _toggleEvery() {
+    final r = review;
+    if (r == null) return;
+    final all = [for (var i = 0; i < r.moves.length; i++) i];
+    final key = r.keyMoments();
+    setState(() {
+      everyMove = !everyMove;
+      stops = everyMove || key.isEmpty ? all : key;
+    });
+  }
+
+  Future<void> _share() async {
+    final r = review;
+    if (r == null) return;
+    String pct(double? v) => v == null ? '–' : '${v.round()}%';
+    final me = player ?? Side.white;
+    final text = StringBuffer('Castlei game review\n')
+      ..writeln(r.coachLine())
+      ..writeln(
+        '${player == null ? 'White' : 'Me'} ${pct(r.accuracy(me))} · '
+        '${player == null ? 'Black' : 'Stockfish'} ${pct(r.accuracy(me.opposite))} accuracy',
+      );
+    await SharePlus.instance.share(ShareParams(text: text.toString()));
   }
 
   void _update(VoidCallback fn) => setState(fn);
@@ -183,6 +215,21 @@ class _ReviewScreenState extends State<ReviewScreen>
                 )
               : null,
           actions: [
+            if (phase == _Phase.walking)
+              IconButton(
+                tooltip: everyMove
+                    ? 'Stop only on mistakes'
+                    : 'Step through every move',
+                isSelected: everyMove,
+                icon: const Icon(Icons.format_list_numbered_rounded),
+                onPressed: _toggleEvery,
+              ),
+            if (phase != _Phase.analysing && review != null)
+              IconButton(
+                tooltip: 'Share summary',
+                icon: const Icon(Icons.ios_share_rounded),
+                onPressed: _share,
+              ),
             IconButton(
               tooltip: 'Explore this game',
               icon: const Icon(Icons.travel_explore),
@@ -206,7 +253,7 @@ class _ReviewScreenState extends State<ReviewScreen>
                 message: s.error!,
                 onRetry: () {
                   loaded = false;
-                  cubit.review(budget);
+                  cubit.review(budget, searchMs: reviewBudget);
                 },
               )
             : switch (phase) {

@@ -373,7 +373,9 @@ class GameCubit extends Cubit<GameView> {
     emit(const GameView());
   }
 
-  Future<void> review(int milliseconds) async {
+  /// Reviews every move. [milliseconds] names the stored result (the analysis
+  /// setting); each search runs for [searchMs] when given, else the same time.
+  Future<void> review(int milliseconds, {int? searchMs}) async {
     engine.cancel();
     Analytics.log('review_started', {'budget_ms': milliseconds});
     final token = ++epoch;
@@ -390,7 +392,7 @@ class GameCubit extends Cubit<GameView> {
           return await engine.search(
             fen: game.rootFen,
             moves: moves,
-            milliseconds: milliseconds,
+            milliseconds: searchMs ?? milliseconds,
             onlyMove: onlyMove,
           );
         } on SearchCanceled {

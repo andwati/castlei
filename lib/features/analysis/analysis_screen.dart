@@ -15,6 +15,7 @@ import '../../core/ui/widgets.dart';
 import '../play/game_common.dart';
 import '../play/game_cubit.dart';
 import 'eval_graph.dart';
+import 'review_screen.dart';
 
 /// Free-form analysis board: explore lines, annotate, run the engine, review a
 /// finished game. Used for studies, repertoires and reviewing played games.
@@ -514,13 +515,20 @@ class _AnalysisScreenState extends State<AnalysisScreen>
                 ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: state.thinking ? null : () => cubit.review(budget),
+                onPressed: state.thinking
+                    ? null
+                    : () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReviewScreen(
+                            game: widget.game,
+                            repo: widget.repo,
+                            engine: widget.engine,
+                          ),
+                        ),
+                      ),
                 icon: const Icon(Icons.analytics_outlined),
-                label: Text(
-                  state.reviewTotal > 0
-                      ? 'Review ${state.reviewDone}/${state.reviewTotal} moves'
-                      : 'Review whole game',
-                ),
+                label: const Text('Guided review'),
               ),
               FutureBuilder(
                 future: _reviewRows,
