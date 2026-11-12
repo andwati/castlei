@@ -4,6 +4,14 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.8 — 2026-11-12
+
+Quieter taps.
+
+- Tapping buttons and menus no longer makes a click sound. Sound is only for moving pieces.
+
+Android build 16 (1.1.8+16).
+
 ## 1.1.7 — 2026-11-12
 
 More ways to make the board yours.
