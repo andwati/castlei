@@ -34,7 +34,7 @@ android {
         applicationId = "com.andwati.castlei"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 29
+        minSdk = 26
         // 64-bit only: Flutter's engine and app code are built for arm64 and x86_64, so
         // 32-bit-only phones must not be offered the app (they would crash on launch).
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }

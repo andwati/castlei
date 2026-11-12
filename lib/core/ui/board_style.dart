@@ -24,6 +24,9 @@ class BoardStyle {
   static String palette = 'pine';
   static bool legalMoves = true, highlightLast = true;
 
+  /// Slightly larger pieces, and stronger piece contrast.
+  static bool magnify = false, contrast = false;
+
   /// Bumped on every change so open boards can repaint.
   static final changes = ValueNotifier<int>(0);
 
@@ -34,6 +37,8 @@ class BoardStyle {
     palette = await repo.preference('boardPalette', 'pine') as String;
     legalMoves = await repo.preference('legalMoves', true) as bool;
     highlightLast = await repo.preference('highlightLast', true) as bool;
+    magnify = await repo.preference('magnifyPieces', false) as bool;
+    contrast = await repo.preference('pieceContrast', false) as bool;
     changes.value++;
   }
 
@@ -42,6 +47,8 @@ class BoardStyle {
     String? palette,
     bool? legalMoves,
     bool? highlightLast,
+    bool? magnify,
+    bool? contrast,
   }) async {
     if (palette != null) {
       BoardStyle.palette = palette;
@@ -54,6 +61,14 @@ class BoardStyle {
     if (highlightLast != null) {
       BoardStyle.highlightLast = highlightLast;
       await repo.setPreference('highlightLast', highlightLast);
+    }
+    if (magnify != null) {
+      BoardStyle.magnify = magnify;
+      await repo.setPreference('magnifyPieces', magnify);
+    }
+    if (contrast != null) {
+      BoardStyle.contrast = contrast;
+      await repo.setPreference('pieceContrast', contrast);
     }
     changes.value++;
   }

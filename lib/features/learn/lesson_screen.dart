@@ -121,9 +121,17 @@ class _LessonsScreenState extends State<LessonsScreen> {
 }
 
 class LessonScreen extends StatefulWidget {
-  const LessonScreen({super.key, required this.repo, required this.lesson});
+  const LessonScreen({
+    super.key,
+    required this.repo,
+    required this.lesson,
+    this.introDemo = true,
+  });
   final Repository repo;
   final GuidedLesson lesson;
+
+  /// Whether a lesson opened for the first time plays its idea on the board.
+  final bool introDemo;
   @override
   State<LessonScreen> createState() => _LessonScreenState();
 }
@@ -169,6 +177,13 @@ class _LessonScreenState extends State<LessonScreen>
     start();
     await save(index, false);
     if (mounted) setState(() => loading = false);
+    // First time in this lesson: show the idea on the board before asking.
+    if (widget.introDemo &&
+        old == null &&
+        mounted &&
+        exercise.solutions.isNotEmpty) {
+      await demonstrate(intro: true);
+    }
   }
 
   void start() {
@@ -236,23 +251,29 @@ class _LessonScreenState extends State<LessonScreen>
     }
   }
 
-  Future<void> demonstrate() async {
+  /// Plays the example on the board. When [intro] is true it is the lesson's
+  /// first look at the idea: it does not count as help.
+  Future<void> demonstrate({bool intro = false}) async {
     if (busy || done || exercise.solutions.isEmpty) return;
     setState(() {
-      assisted = true;
-      helped.add(index);
+      if (!intro) {
+        assisted = true;
+        helped.add(index);
+      }
       busy = true;
       position = exercise.initial;
       played = [];
       ply = 0;
     });
-    await save(index, false);
+    if (!intro) await save(index, false);
     for (final uci in exercise.solutions.first) {
       await Future<void>.delayed(const Duration(milliseconds: 650));
       if (!mounted) return;
       setState(() {
         commit(uci);
-        feedback = 'Example · Watch the continuation';
+        feedback = intro
+            ? 'Watch the idea first'
+            : 'Example · Watch the continuation';
       });
     }
     await Future<void>.delayed(const Duration(milliseconds: 900));

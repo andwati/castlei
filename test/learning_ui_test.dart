@@ -19,7 +19,9 @@ Widget host(Widget child, {Brightness brightness = Brightness.light}) =>
     MaterialApp(theme: buildTheme(brightness), home: child);
 Finder square(String name) => find.bySemanticsLabel(RegExp('^$name,'));
 void main() {
-  testWidgets('promotion choices remain spaced on a narrow phone', (t) async {
+  testWidgets('promotion popover keeps 48 px targets on a narrow phone', (
+    t,
+  ) async {
     t.view.devicePixelRatio = 1;
     t.view.physicalSize = const Size(320, 760);
     addTearDown(t.view.reset);
@@ -36,14 +38,17 @@ void main() {
     await t.tap(square('a8'));
     await t.pumpAndSettle();
     Rect? previous;
-    for (final role in ['queen', 'rook', 'bishop', 'knight']) {
+    for (final role in ['queen', 'knight', 'rook', 'bishop']) {
       final rect = t.getRect(find.bySemanticsLabel('Promote to $role'));
       expect(rect.width, greaterThanOrEqualTo(48));
+      expect(rect.height, greaterThanOrEqualTo(48));
       if (previous != null) {
-        expect(rect.left - previous.right, greaterThanOrEqualTo(12));
+        expect(rect.top, greaterThanOrEqualTo(previous.bottom));
       }
       previous = rect;
     }
+    await t.tap(find.bySemanticsLabel('Promote to knight'));
+    await t.pumpAndSettle();
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox());
   });
@@ -96,7 +101,9 @@ void main() {
       final db = AppDatabase.memory();
       final repo = Repository(db);
       final lesson = (await loadLessons())[1];
-      await t.pumpWidget(host(LessonScreen(repo: repo, lesson: lesson)));
+      await t.pumpWidget(
+        host(LessonScreen(repo: repo, lesson: lesson, introDemo: false)),
+      );
       await t.pumpAndSettle();
       await t.scrollUntilVisible(
         find.text('Restart exercise'),
@@ -245,7 +252,9 @@ void main() {
       final db = AppDatabase.memory();
       final repo = Repository(db);
       final lesson = (await loadLessons()).first;
-      await t.pumpWidget(host(LessonScreen(repo: repo, lesson: lesson)));
+      await t.pumpWidget(
+        host(LessonScreen(repo: repo, lesson: lesson, introDemo: false)),
+      );
       await t.pumpAndSettle();
       await t.scrollUntilVisible(
         find.text('d4'),
@@ -262,7 +271,9 @@ void main() {
       );
       await t.pumpWidget(const SizedBox());
       await t.pumpAndSettle();
-      await t.pumpWidget(host(LessonScreen(repo: repo, lesson: lesson)));
+      await t.pumpWidget(
+        host(LessonScreen(repo: repo, lesson: lesson, introDemo: false)),
+      );
       await t.pumpAndSettle();
       expect(find.text('Exercise 2 of 3'), findsOneWidget);
       await t.scrollUntilVisible(
@@ -312,7 +323,9 @@ void main() {
     final db = AppDatabase.memory();
     final repo = Repository(db);
     final lesson = (await loadLessons()).first;
-    await t.pumpWidget(host(LessonScreen(repo: repo, lesson: lesson)));
+    await t.pumpWidget(
+      host(LessonScreen(repo: repo, lesson: lesson, introDemo: false)),
+    );
     await t.pumpAndSettle();
     await t.scrollUntilVisible(
       find.text('Hint'),
@@ -423,6 +436,7 @@ void main() {
                 key: ValueKey(size),
                 repo: repo,
                 lesson: lesson,
+                introDemo: false,
               ),
             ),
             brightness: Brightness.dark,
@@ -463,6 +477,24 @@ void main() {
     await t.pumpWidget(const SizedBox());
     await t.pumpAndSettle();
     await t.runAsync(engine.dispose);
+    await t.runAsync(db.close);
+  });
+  testWidgets('a first visit plays the idea on the board, unassisted', (
+    t,
+  ) async {
+    final db = AppDatabase.memory();
+    final repo = Repository(db);
+    final lesson = (await loadLessons()).firstWhere(
+      (l) => l.exercises.first.solutions.isNotEmpty,
+    );
+    await t.pumpWidget(host(LessonScreen(repo: repo, lesson: lesson)));
+    await t.pump(const Duration(milliseconds: 100));
+    await t.pump(const Duration(seconds: 10));
+    await t.pumpAndSettle();
+    expect(find.text('Now try it yourself'), findsOneWidget);
+    final progress = await repo.preference('lessons.progress.v1', {});
+    expect(progress[lesson.id]['assisted'], isFalse);
+    await t.pumpWidget(const SizedBox());
     await t.runAsync(db.close);
   });
 }

@@ -151,6 +151,28 @@ class _BoardSettingsState extends State<BoardSettingsScreen> {
                     },
                   ),
                   SwitchListTile(
+                    title: const Text('Larger pieces'),
+                    subtitle: const Text(
+                      'Fills more of each square so pieces are easier to see.',
+                    ),
+                    value: BoardStyle.magnify,
+                    onChanged: (v) async {
+                      await BoardStyle.save(widget.repo, magnify: v);
+                      setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Stronger piece contrast'),
+                    subtitle: const Text(
+                      'Makes white pieces brighter and black pieces darker.',
+                    ),
+                    value: BoardStyle.contrast,
+                    onChanged: (v) async {
+                      await BoardStyle.save(widget.repo, contrast: v);
+                      setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
                     title: const Text('Board coordinates'),
                     subtitle: const Text(
                       'Letters and numbers along the edges of the board.',

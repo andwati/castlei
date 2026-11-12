@@ -4,6 +4,17 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.5 — 2026-11-12
+
+Works on more phones, and easier to see.
+
+- Castlei now installs on Android 8 and newer (it needed Android 10 before).
+- Promotion: pick the piece from a popover right on the promotion square.
+- New lessons play their idea on the board first, then ask you to try it.
+- Board settings: larger pieces and stronger piece contrast.
+
+Android build 13 (1.1.5+13).
+
 ## 1.1.4 — 2026-11-12
 
 Small touches that make progress feel earned.

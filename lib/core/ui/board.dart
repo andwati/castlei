@@ -51,6 +51,22 @@ class ChessBoard extends StatefulWidget {
   State<ChessBoard> createState() => _BoardState();
 }
 
+/// A piece image, with stronger contrast when the player asks for it.
+Widget _piece(String asset) {
+  final image = SvgPicture.asset(asset);
+  if (!BoardStyle.contrast) return image;
+  const c = 1.5, t = (1 - c) * 128;
+  return ColorFiltered(
+    colorFilter: const ColorFilter.matrix([
+      c, 0, 0, 0, t, //
+      0, c, 0, 0, t,
+      0, 0, c, 0, t,
+      0, 0, 0, 1, 0,
+    ]),
+    child: image,
+  );
+}
+
 class _Tracked {
   _Tracked(this.id, this.piece);
   final int id;
@@ -133,6 +149,70 @@ class _BoardState extends State<ChessBoard> {
     if (old.position.fen != widget.position.fen) _sync();
   }
 
+  /// A column of four pieces over the promotion square, growing towards the
+  /// middle of the board. Pieces are never smaller than a 48 px touch target.
+  Future<Role?> _askPromotion(Square to, Side side) {
+    final box = context.findRenderObject() as RenderBox;
+    final origin = box.localToGlobal(Offset.zero);
+    final cell = box.size.width / 8;
+    final piece = math.max(cell, 48.0);
+    final column = widget.flipped ? 7 - to.file : to.file;
+    final atTop = (widget.flipped ? to.rank : 7 - to.rank) == 0;
+    final screen = MediaQuery.sizeOf(context);
+    final left = (origin.dx + column * cell + cell / 2 - piece / 2).clamp(
+      0.0,
+      screen.width - piece,
+    );
+    final top = atTop ? origin.dy : origin.dy + 8 * cell - 4 * piece;
+    return showGeneralDialog<Role>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Cancel promotion',
+      barrierColor: Colors.black38,
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (c, _, _) => Stack(
+        children: [
+          Positioned(
+            left: left,
+            top: top,
+            width: piece,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(piece / 2),
+              color: Theme.of(c).colorScheme.surfaceContainerHighest,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final r
+                      in atTop
+                          ? [Role.queen, Role.knight, Role.rook, Role.bishop]
+                          : [Role.bishop, Role.rook, Role.knight, Role.queen])
+                    Semantics(
+                      button: true,
+                      label: 'Promote to ${r.name}',
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => Navigator.pop(c, r),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: SizedBox.square(
+                            dimension: piece - 8,
+                            child: SvgPicture.asset(
+                              'assets/pieces/${side == Side.white ? 'w' : 'b'}${r.letter.toUpperCase()}.svg',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> choose(Square s) async {
     if (widget.drawing) {
       widget.onShape?.call('G${s.name}');
@@ -149,64 +229,7 @@ class _BoardState extends State<ChessBoard> {
           NormalMove(from: from, to: s, promotion: Role.queen),
         );
         if (legal) {
-          final role = await showModalBottomSheet<Role>(
-            context: context,
-            builder: (c) => SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Promote to',
-                      style: Theme.of(c).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      spacing: 12,
-                      children: [
-                        for (final r in [
-                          Role.queen,
-                          Role.rook,
-                          Role.bishop,
-                          Role.knight,
-                        ])
-                          Semantics(
-                            button: true,
-                            label: 'Promote to ${r.name}',
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () => Navigator.pop(c, r),
-                              child: Container(
-                                width: math.min(
-                                  72,
-                                  (MediaQuery.sizeOf(c).width - 76) / 4,
-                                ),
-                                height: math.min(
-                                  72,
-                                  (MediaQuery.sizeOf(c).width - 76) / 4,
-                                ),
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(c)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: SvgPicture.asset(
-                                  'assets/pieces/${p.turn == Side.white ? 'w' : 'b'}${r.letter.toUpperCase()}.svg',
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+          final role = await _askPromotion(s, p.turn);
           if (role == null || !mounted) return;
           move = NormalMove(from: from, to: s, promotion: role);
         }
@@ -492,8 +515,10 @@ class _BoardState extends State<ChessBoard> {
                                 width: size,
                                 height: size,
                                 child: Padding(
-                                  padding: EdgeInsets.all(size * .06),
-                                  child: SvgPicture.asset(
+                                  padding: EdgeInsets.all(
+                                    BoardStyle.magnify ? size * .0 : size * .06,
+                                  ),
+                                  child: _piece(
                                     'assets/pieces/${e.value.piece.color == Side.white ? 'w' : 'b'}${e.value.piece.role.letter.toUpperCase()}.svg',
                                   ),
                                 ),
