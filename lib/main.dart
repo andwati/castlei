@@ -1,3 +1,5 @@
+import 'core/ui/board_style.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
@@ -124,6 +126,7 @@ class _AppState extends State<CastleiApp> {
         ),
       ],
     );
+    BoardStyle.load(widget.repo);
     widget.repo.preference('theme', 'system').then((v) {
       if (mounted) setState(() => mode = ThemeMode.values.byName(v));
     });
@@ -328,6 +331,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                 if (!study) ...[
                   const _DialogLabel('Opponent'),
                   Wrap(
+                    alignment: WrapAlignment.start,
                     spacing: 8,
                     runSpacing: 8,
                     children: [
@@ -356,6 +360,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
                   const SizedBox(height: 16),
                   const _DialogLabel('Time'),
                   Wrap(
+                    alignment: WrapAlignment.start,
                     spacing: 8,
                     runSpacing: 8,
                     children: [

@@ -20,6 +20,7 @@ import 'diagnostics_screen.dart';
 import 'feedback_screen.dart';
 import 'notification_settings.dart';
 import 'open_source_screen.dart';
+import 'board_settings_screen.dart';
 import 'preferences_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -470,8 +471,19 @@ class _SettingsState extends State<SettingsScreen> {
         ),
         const SectionLabel('Practice'),
         ActionTile(
-          title: 'Practice preferences',
-          subtitle: 'Feedback, engine resources, and drill limits',
+          title: 'Board and sound',
+          subtitle: 'Board colours, legal-move dots, sounds and vibration',
+          icon: Icons.grid_view_rounded,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BoardSettingsScreen(repo: widget.repo),
+            ),
+          ),
+        ),
+        ActionTile(
+          title: 'Analysis and practice',
+          subtitle: 'Engine thinking time, engine resources and drill limits',
           icon: Icons.tune_rounded,
           onTap: () => Navigator.push(
             context,

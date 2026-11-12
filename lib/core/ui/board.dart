@@ -1,3 +1,5 @@
+import 'board_style.dart';
+
 import 'dart:math' as math;
 import 'dart:async';
 
@@ -236,7 +238,12 @@ class _BoardState extends State<ChessBoard> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    valueListenable: BoardStyle.changes,
+    builder: (context, _, _) => _board(context),
+  );
+
+  Widget _board(BuildContext context) {
     final tk = context.tokens;
     final last = widget.lastMove != null && widget.lastMove!.length >= 4
         ? {widget.lastMove!.substring(0, 2), widget.lastMove!.substring(2, 4)}
@@ -328,11 +335,17 @@ class _BoardState extends State<ChessBoard> {
                           final sq = Square(squareIndex(i));
                           final piece = widget.position.board.pieceAt(sq);
                           final legal =
+                              BoardStyle.legalMoves &&
                               selected != null &&
                               widget.position.legalMovesOf(selected!).has(sq);
                           final light = (sq.file + sq.rank) % 2 != 0;
-                          final base = light ? tk.boardLight : tk.boardDark;
-                          final isLast = last.contains(sq.name);
+                          final pal = BoardStyle.current;
+                          final base = BoardStyle.palette == 'pine'
+                              ? (light ? tk.boardLight : tk.boardDark)
+                              : (light ? pal.light : pal.dark);
+                          final isLast =
+                              BoardStyle.highlightLast &&
+                              last.contains(sq.name);
                           final isSel = selected == sq;
                           final isCheck = kingInCheck == sq;
                           final color = rejected == sq
@@ -349,7 +362,9 @@ class _BoardState extends State<ChessBoard> {
                                 )
                               : base;
                           final capture = legal && piece != null;
-                          final onSquare = light ? tk.boardDark : tk.boardLight;
+                          final onSquare = base.computeLuminance() > .4
+                              ? const Color(0xff4a4a4a)
+                              : Colors.white70;
                           return Semantics(
                             button: true,
                             label:

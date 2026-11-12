@@ -74,28 +74,16 @@ class _PreferencesState extends State<PreferencesScreen> {
   );
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Practice preferences')),
+    appBar: AppBar(title: const Text('Analysis and practice')),
     body: !ready
         ? const Center(child: CircularProgressIndicator())
         : ListView(
             padding: pagePadding(context),
             children: [
-              const SectionLabel('Feedback'),
-              GroupCard(
-                children: [
-                  for (final e in {
-                    'sound': 'Move sound',
-                    'haptics': 'Move haptics',
-                    'coordinates': 'Board coordinates',
-                  }.entries)
-                    SwitchListTile(
-                      title: Text(e.value),
-                      value: values[e.key],
-                      onChanged: (v) => save(e.key, v),
-                    ),
-                ],
-              ),
               const SectionLabel('Analysis'),
+              const _Hint(
+                'How long the engine thinks about each move in a review or hint.',
+              ),
               choice(
                 'analysisMs',
                 'Default analysis budget',
@@ -105,6 +93,9 @@ class _PreferencesState extends State<PreferencesScreen> {
                   'Balanced · 3 seconds',
                   'Deep · 10 seconds',
                 ],
+              ),
+              const _Hint(
+                'How many alternative moves the analysis board shows.',
               ),
               choice(
                 'multiPv',
@@ -125,6 +116,7 @@ class _PreferencesState extends State<PreferencesScreen> {
                 icon: Icons.thermostat_outlined,
               ),
               const SectionLabel('Opening drills'),
+              const _Hint('How many positions a drill session asks for.'),
               choice(
                 'dueLimit',
                 'Due positions per session',
@@ -139,5 +131,17 @@ class _PreferencesState extends State<PreferencesScreen> {
               ),
             ],
           ),
+  );
+}
+
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: context.text.bodySmall?.copyWith(
+      color: context.colors.onSurfaceVariant,
+    ),
   );
 }

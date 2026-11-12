@@ -21,6 +21,8 @@ A guided review of every game.
 - Resign and Take back work while a game is paused.
 - Library rows say who won (You won, You lost, Draw) and where a game came from; unfinished games no longer look like errors.
 - Practice puzzles come in sets of 20 with Another set; puzzle themes, packs and progress use readable names; singular and plural counts are correct.
+- New Board and sound settings page with a live board: six board colour sets, legal-move dots, last-move highlight, coordinates, sounds and vibration, each with a one-line explanation.
+- Analysis and practice settings explain what each option does.
 
 Android build 11 (1.1.3+11).
 
