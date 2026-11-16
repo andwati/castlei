@@ -1,7 +1,9 @@
-A faster, stronger engine.
-- Game reviews are about twice as fast
-- Analysis uses your phone's fast cores, so results are more accurate in the same time
-- Updated to Stockfish 19
-- Engine resources setting: 1, 2 or 4 threads
-- Earlier reviews refresh when you open them
-- Plus recent releases: quieter taps, board and sound tabs, castling and auto-queen options, figurine notation
+Fairer games and truer reviews.
+- The engine no longer claims a draw when it is winning
+- Long games stay smooth as the move count grows
+- Forced moves are answered at once
+- Reviews show who a mate is for (+M3 or -M3) and no longer call a game clean after an allowed mate
+- Tapping your rook no longer castles by surprise
+- Any checkmate solves a puzzle
+- Lesson and progress page fixes
+- About 13 MB smaller

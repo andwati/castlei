@@ -2,9 +2,10 @@ import 'dart:convert';
 
 import 'package:dartchess/dartchess.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/chess/model.dart';
+import '../../core/engine/engine.dart';
 import '../../core/ui/theme.dart';
 
 /// One reviewed move, with the evaluation after it from White's point of view.
@@ -17,10 +18,14 @@ class ReviewPoint {
     required this.score,
     required this.mate,
     required this.label,
+    this.checkmate = false,
   });
   final String nodeId, san, label;
   final int ply, score;
   final bool whiteMoved, mate;
+
+  /// The move itself was checkmate.
+  final bool checkmate;
 
   /// Evaluation after the move in pawns, White's perspective; mate = ±10.
   double get whitePawns {
@@ -31,7 +36,8 @@ class ReviewPoint {
 
   String get evalText {
     final mover = whiteMoved ? 1 : -1;
-    if (mate) return 'M${(score * mover).abs()}';
+    if (checkmate) return 'Checkmate';
+    if (mate) return mateText(score * mover);
     final v = whitePawns;
     return '${v >= 0 ? '+' : ''}${v.toStringAsFixed(1)}';
   }
@@ -64,6 +70,7 @@ List<ReviewPoint> parseReview(List<Map<String, dynamic>> rows, ChessGame g) {
         score: played['score'] as int,
         mate: played['mate'] as bool,
         label: data['label'] as String,
+        checkmate: played['mate'] == true && played['depth'] == 0,
       ),
     );
   }
@@ -93,8 +100,13 @@ class EvalGraph extends StatelessWidget {
     ];
     int count(String l) => points.where((p) => p.label == l).length;
     String n(int c, String one, String many) => '$c ${c == 1 ? one : many}';
+    // A missed or allowed mate costs the game like any blunder.
+    final blunders =
+        count('Blunder') +
+        count('Missed Forced Mate') +
+        count('Allowed Forced Mate');
     final summary =
-        '${n(count('Blunder'), 'blunder', 'blunders')}, ${n(count('Mistake'), 'mistake', 'mistakes')}, ${n(count('Inaccuracy'), 'inaccuracy', 'inaccuracies')}';
+        '${n(blunders, 'blunder', 'blunders')}, ${n(count('Mistake'), 'mistake', 'mistakes')}, ${n(count('Inaccuracy'), 'inaccuracy', 'inaccuracies')}';
     return Semantics(
       label: 'Evaluation graph. $summary. Tap a point to jump to that move.',
       child: Card(

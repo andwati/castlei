@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/ui/plural.dart';
 
@@ -208,9 +208,12 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
   Future<void> move(Move m) async {
     if (complete || busy) return;
     final normalized = standardUci(position!, m);
+    // Any checkmate solves a puzzle, even when the listed line mates another
+    // way.
+    final mates = !opening && position!.play(m).isCheckmate;
     if (opening
         ? !solution.contains(normalized)
-        : solution[ply] != normalized) {
+        : solution[ply] != normalized && !mates) {
       setState(() {
         failed = true;
         wrongMove = normalized;
@@ -225,22 +228,26 @@ class _TrainingState extends State<TrainingScreen> with WidgetsBindingObserver {
       wrongMove = null;
       _play(normalized);
       ply++;
-      message = opening || ply == solution.length
+      message = opening || ply == solution.length || mates
           ? 'Good move'
           : 'Opponent’s reply…';
     });
-    if (opening || ply == solution.length) {
+    const solved = 'Solved without help', practised = 'Completed with practice';
+    if (opening || ply == solution.length || mates) {
       await finish(!failed && hints == 0);
-      message = failed || hints > 0
-          ? 'Completed with practice'
-          : 'Solved without help';
+      message = failed || hints > 0 ? practised : solved;
     } else {
       await Future<void>.delayed(const Duration(milliseconds: 350));
-      if (!mounted) return;
+      // Revealed or left while the reply was on its way.
+      if (!mounted || complete) {
+        busy = false;
+        return;
+      }
       _play(solution[ply]);
       ply++;
       if (ply == solution.length) {
         await finish(!failed && hints == 0);
+        message = failed || hints > 0 ? practised : solved;
       } else {
         message = 'Your turn · Find the continuation';
       }

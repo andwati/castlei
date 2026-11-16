@@ -1,7 +1,7 @@
 import '../../core/ui/board_style.dart';
 import '../../core/ui/plural.dart';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/chess/model.dart';
 import '../../core/ui/theme.dart';

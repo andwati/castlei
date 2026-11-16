@@ -3,7 +3,7 @@ import 'package:castlei/core/ui/sfx.dart';
 import 'package:castlei/core/ui/theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget host(Widget child) => MaterialApp(

@@ -4,6 +4,7 @@ import 'package:castlei/core/engine/engine.dart';
 import 'package:castlei/core/storage/database.dart';
 import 'package:castlei/main.dart' as app;
 import 'package:dartchess/dartchess.dart' hide File;
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
@@ -58,7 +59,11 @@ void main() {
         final (_, result, moves) = await state();
         if (moves.length >= ply || result != '*') return;
       }
-      throw TestFailure('timed out waiting for ply $ply');
+      final (_, _, played) = await state();
+      throw TestFailure(
+        'timed out waiting for ply $ply after ${played.join(' ')}; '
+        'paused=${find.text('Resume').evaluate().isNotEmpty}',
+      );
     }
 
     var result = '*';
@@ -78,6 +83,9 @@ void main() {
       final uci = best.bestmove;
       if (uci.length < 4 || uci == '(none)') break;
       final before = moves.length;
+      // The reply is in the database before it is on screen: draw it first, or
+      // the tap lands on the previous position and is ignored.
+      await t.pump(const Duration(milliseconds: 100));
       await t.tap(sq(uci.substring(0, 2)));
       await t.pump(const Duration(milliseconds: 250));
       await t.tap(sq(uci.substring(2, 4)));
@@ -87,7 +95,18 @@ void main() {
         await t.tap(find.bySemanticsLabel('Promote to ${roles[uci[4]]}'));
         await t.pump(const Duration(milliseconds: 300));
       }
-      await waitForPly(before + 1);
+      try {
+        await waitForPly(before + 1);
+      } on TestFailure catch (e) {
+        final selected = find
+            .bySemanticsLabel(RegExp(', selected'))
+            .evaluate()
+            .length;
+        throw TestFailure(
+          '${e.message}; tried $uci; selected squares $selected; '
+          'thinking=${find.byType(CircularProgressIndicator).evaluate().length}',
+        );
+      }
     }
 
     (_, result, moves) = await state();

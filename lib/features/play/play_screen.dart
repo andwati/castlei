@@ -1,5 +1,5 @@
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -256,7 +256,7 @@ class _PlayScreenState extends State<PlayScreen>
             ToolButton(
               icon: Icons.undo_rounded,
               label: 'Take back',
-              onTap: g.current == null || state.thinking ? null : _takeBack,
+              onTap: !cubit.canTakeBack || state.thinking ? null : _takeBack,
             ),
             ToolButton(
               icon: Icons.lightbulb_outline_rounded,

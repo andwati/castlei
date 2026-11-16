@@ -2,7 +2,7 @@ import '../../core/ui/plural.dart';
 
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../../core/storage/repository.dart';
@@ -33,6 +33,17 @@ class StatisticsScreen extends StatefulWidget {
 class _StatsState extends State<StatisticsScreen> {
   int days = 30;
   String category = 'unassisted';
+
+  /// Loaded once per period, not on every rebuild: switching the game filter
+  /// must not swap the page for a spinner and lose the scroll position.
+  late Future<Map<String, dynamic>> _data = load();
+
+  /// Opens a practice screen and refreshes the numbers on the way back.
+  Future<void> _open(Widget screen) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    if (mounted) setState(() => _data = load());
+  }
+
   Future<Map<String, dynamic>> load() async {
     final since = days == 0
         ? 0
@@ -91,7 +102,7 @@ class _StatsState extends State<StatisticsScreen> {
       if (g['result'] == '1/2-1/2') {
         draws++;
       } else if (g['result'] ==
-          (jsonDecode(g['settings'])['side'] == 'white' ? '1-0' : '0-1')) {
+          (jsonDecode(g['settings'])['side'] == 'black' ? '0-1' : '1-0')) {
         wins++;
       }
     }
@@ -190,10 +201,13 @@ class _StatsState extends State<StatisticsScreen> {
             ButtonSegment(value: 0, label: Text('All')),
           ],
           selected: {days},
-          onSelectionChanged: (v) => setState(() => days = v.first),
+          onSelectionChanged: (v) => setState(() {
+            days = v.first;
+            _data = load();
+          }),
         ),
         FutureBuilder(
-          future: load(),
+          future: _data,
           builder: (context, s) {
             if (!s.hasData) {
               return const Padding(
@@ -429,15 +443,12 @@ class _StatsState extends State<StatisticsScreen> {
                               kind == 'opening' &&
                                   widget.onOpenRepertoires != null
                               ? widget.onOpenRepertoires
-                              : () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => kind == 'lesson'
-                                        ? LessonsScreen(repo: widget.repo)
-                                        : kind == 'coordinate'
-                                        ? CoordinateScreen(repo: widget.repo)
-                                        : TrainingScreen(repo: widget.repo),
-                                  ),
+                              : () => _open(
+                                  kind == 'lesson'
+                                      ? LessonsScreen(repo: widget.repo)
+                                      : kind == 'coordinate'
+                                      ? CoordinateScreen(repo: widget.repo)
+                                      : TrainingScreen(repo: widget.repo),
                                 ),
                         ),
                       );
@@ -511,7 +522,12 @@ class _StatsState extends State<StatisticsScreen> {
                                         BarChartRodData(
                                           toY: daily[i].toDouble(),
                                           color: context.colors.primary,
-                                          width: 12,
+                                          // Ninety days of bars still fit a
+                                          // phone without overlapping.
+                                          width: (220 / daily.length).clamp(
+                                            2.0,
+                                            12.0,
+                                          ),
                                           borderRadius:
                                               const BorderRadius.vertical(
                                                 top: Radius.circular(6),
@@ -612,13 +628,10 @@ class _StatsState extends State<StatisticsScreen> {
                             subtitle:
                                 '${ranked.first.value[1]} of ${ranked.first.value[0]} solved unaided · Your lowest theme success rate',
                             icon: Icons.extension_outlined,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => TrainingScreen(
-                                  repo: widget.repo,
-                                  initialTheme: ranked.first.key,
-                                ),
+                            onTap: () => _open(
+                              TrainingScreen(
+                                repo: widget.repo,
+                                initialTheme: ranked.first.key,
                               ),
                             ),
                           ),

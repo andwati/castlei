@@ -4,7 +4,7 @@ import 'package:castlei/core/chess/model.dart';
 import 'package:castlei/core/ui/theme.dart';
 import 'package:castlei/features/analysis/eval_graph.dart';
 import 'package:dartchess/dartchess.dart' hide File;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> row(
@@ -53,8 +53,8 @@ void main() {
     expect(points[3].whitePawns, -10);
     expect(points[0].evalText, '+0.3');
     expect(points[1].evalText, '-0.3');
-    expect(points[2].evalText, 'M3');
-    expect(points[3].evalText, 'M2');
+    expect(points[2].evalText, '+M3');
+    expect(points[3].evalText, '-M2');
   });
 
   test('quality marks are text, not colour alone', () {

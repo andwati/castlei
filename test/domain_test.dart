@@ -55,7 +55,8 @@ void main() {
     expect(line.index, 2);
     expect(line.mate, isTrue);
     expect(line.bounded, isTrue);
-    expect(line.label(false), 'M3');
+    expect(line.label(false), '+M3');
+    expect(line.label(true), '-M3');
   });
   test('scheduler resets and caps intervals in UTC', () {
     final now = DateTime.utc(2026, 11, 8);

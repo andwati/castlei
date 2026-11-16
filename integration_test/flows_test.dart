@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:castlei/core/storage/backup.dart';
 import 'package:castlei/core/storage/database.dart';
@@ -29,68 +29,87 @@ Future<void> startGame(WidgetTester t) async {
   await t.pumpAndSettle();
   await t.tap(find.text('Create'));
   await waitFor(t, sq('e2'));
+  // A game opens running; Resume only shows after leaving it.
   if (find.text('Resume').evaluate().isNotEmpty) {
     await t.tap(find.text('Resume'));
     await t.pump(const Duration(milliseconds: 500));
   }
 }
 
+/// Plays 1. e4 and waits for the engine's reply to be on the board.
 Future<void> playE4(WidgetTester t) async {
   await t.tap(sq('e2'));
   await t.pump(const Duration(milliseconds: 300));
   await t.tap(sq('e4'));
-  await waitFor(t, find.textContaining('Your move'), seconds: 15);
+  // Some black pawn or knight has left its home square.
+  await waitFor(
+    t,
+    find.bySemanticsLabel(RegExp(r'^[a-h][78], empty')),
+    seconds: 15,
+  );
+  await t.pump(const Duration(milliseconds: 300));
 }
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('takeback restores position and hint marks assisted', (t) async {
+  testWidgets('takeback restores the position and a hint can follow', (
+    t,
+  ) async {
     await startGame(t);
     await playE4(t);
     await t.tap(find.text('Take back'));
     await waitFor(t, find.bySemanticsLabel(RegExp('^e2, white pawn')));
-    await t.tap(find.text('Resume'));
-    await t.pump(const Duration(milliseconds: 500));
+    // Both moves are gone and the game carries on without a Resume tap.
+    expect(find.bySemanticsLabel(RegExp(r'^[a-h][78], empty')), findsNothing);
+    expect(find.text('Resume'), findsNothing);
     await t.tap(find.text('Hint'));
-    await waitFor(t, find.textContaining('paused'));
+    // The hint search runs for a second, then the board is playable again.
+    for (var i = 0; i < 15; i++) {
+      await t.pump(const Duration(milliseconds: 200));
+    }
+    expect(find.textContaining('Engine paused'), findsNothing);
+    await playE4(t);
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('resign finishes game and review classifies moves', (t) async {
+  testWidgets('resign finishes the game and the review runs', (t) async {
     await startGame(t);
     await playE4(t);
     await t.tap(find.text('Resign'));
     await t.pumpAndSettle();
     await t.tap(find.text('Resign').last);
-    await waitFor(t, find.text('Review game'));
+    await waitFor(t, find.text('You lost'));
+    expect(find.text('Resignation'), findsOneWidget);
     await t.tap(find.text('Review game'));
-    await t.pumpAndSettle();
-    await t.scrollUntilVisible(
-      find.text('Review whole game'),
-      300,
-      scrollable: find.byType(Scrollable).first,
+    // The review starts by itself and ends on its summary.
+    await waitFor(
+      t,
+      find.byWidgetPredicate(
+        (w) =>
+            w is Text &&
+            (w.data == 'Start review' || w.data == 'Step through the game'),
+      ),
+      seconds: 90,
     );
-    await t.ensureVisible(find.text('Review whole game'));
-    await t.pumpAndSettle();
-    await t.tap(find.text('Review whole game'));
-    await waitFor(t, find.textContaining('Review 2/2'), seconds: 60);
     expect(t.takeException(), isNull);
   });
 
   testWidgets('puzzle can be revealed and advanced', (t) async {
     await app.main();
     await t.pumpAndSettle();
-    await t.tap(find.text('Daily tactics'));
-    await t.pumpAndSettle();
+    await t.tap(find.text('Practice puzzles'));
+    await waitFor(t, find.text('Reveal'));
     expect(find.text('Tactical puzzles'), findsOneWidget);
-    await t.scrollUntilVisible(
-      find.text('Reveal'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await t.tap(find.text('Reveal'));
+    await t.ensureVisible(find.text('Reveal'));
     await t.pumpAndSettle();
+    await t.tap(find.text('Reveal'));
+    await waitFor(t, find.text('Next position'));
+    await t.ensureVisible(find.text('Next position'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Next position'));
+    await waitFor(t, find.text('Reveal'));
+    expect(find.textContaining('2 of '), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 
@@ -130,7 +149,7 @@ void main() {
     await t.tap(find.byIcon(Icons.download).first);
     await waitFor(t, find.textContaining('Installed 5000'), seconds: 60);
     await t.pumpAndSettle();
-    expect(find.textContaining('Installed: '), findsWidgets);
+    expect(find.text('On this device'), findsWidgets);
   });
 
   test('backup round trip on a real on-device sqlite file', () async {

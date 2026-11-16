@@ -48,6 +48,9 @@ class GameCubit extends Cubit<GameView> {
   int white = 0, black = 0;
   bool saving = false;
   int epoch = 0;
+
+  /// True until the engine has searched once for this game on this screen.
+  bool _engineFresh = true;
   bool get timed =>
       game.settings['baseMs'] != null && game.settings['baseMs'] != 0;
   Side get human => game.settings['side'] == 'black' ? Side.black : Side.white;
@@ -187,20 +190,23 @@ class GameCubit extends Cubit<GameView> {
     }
   }
 
-  int get repetitions {
-    final key = positionKey(game.position);
-    var count = positionKey(game.at(null)) == key ? 1 : 0;
+  /// How often each position on the way to the current one has occurred.
+  Map<String, int> get _seen {
+    final seen = <String, int>{game.keyAt(null): 1};
     for (final n in game.path(game.current)) {
-      if (positionKey(game.at(n.id)) == key) count++;
+      seen.update(game.keyAt(n.id), (c) => c + 1, ifAbsent: () => 1);
     }
-    return count;
+    return seen;
   }
+
+  int get repetitions => _seen[game.keyAt(game.current)] ?? 1;
 
   bool get canClaim => repetitions >= 3 || game.position.halfmoves >= 100;
   List<Move> get intendedClaims {
     if (study || game.position.turn != human || game.result != '*') return [];
     final p = game.position;
     final candidates = <Move>[];
+    final seen = _seen;
     for (final entry in p.legalMoves.entries) {
       for (final to in entry.value.squares) {
         final roles =
@@ -212,11 +218,7 @@ class GameCubit extends Cubit<GameView> {
           final m = NormalMove(from: entry.key, to: to, promotion: role);
           if (!p.isLegal(m)) continue;
           final next = p.play(m);
-          final key = positionKey(next);
-          var count = positionKey(game.at(null)) == key ? 1 : 0;
-          for (final n in game.path(game.current)) {
-            if (positionKey(game.at(n.id)) == key) count++;
-          }
+          final count = seen[positionKey(next)] ?? 0;
           if (next.halfmoves >= 100 || count >= 2) candidates.add(m);
         }
       }
@@ -241,15 +243,11 @@ class GameCubit extends Cubit<GameView> {
 
   Future<void> engineMove() async {
     if (game.result != '*' || state.paused) return;
-    if (canClaim) {
-      await claim();
-      return;
-    }
     final token = ++epoch;
     emit(const GameView(paused: false, thinking: true));
     try {
       final remaining = game.position.turn == Side.white ? white : black;
-      final ms = timed
+      final budget = timed
           ? min(
               RemoteSettings.engineMaxMsTimed,
               max(
@@ -262,13 +260,34 @@ class GameCubit extends Cubit<GameView> {
               ),
             )
           : RemoteSettings.engineMaxMsUntimed;
+      // A forced move needs no thought: reply at once.
+      final forced =
+          game.position.legalMoves.values.fold<int>(
+            0,
+            (n, squares) => n + squares.size,
+          ) ==
+          1;
+      final ms = forced ? min(budget, 100) : budget;
       final result = await engine.search(
         fen: game.rootFen,
         moves: game.path(game.current).map((e) => e.uci).toList(),
         milliseconds: ms,
         skill: (game.settings['skill'] ?? 10) as int,
+        // What the engine learned on earlier moves of this game still holds:
+        // keep its hash table instead of clearing it before every move.
+        newGame: _engineFresh,
       );
+      _engineFresh = false;
       if (token != epoch || isClosed) return;
+      // A draw is there for the taking (repetition or fifty moves). The engine
+      // takes it unless it is clearly better, when it plays on for the win.
+      final line = result.lines.firstOrNull;
+      final ahead =
+          line != null && (line.mate ? line.score > 0 : line.score > 50);
+      if (canClaim && !ahead) {
+        await claim();
+        return;
+      }
       final move = Move.parse(result.bestmove);
       if (move == null || !game.position.isLegal(move)) {
         throw StateError('Engine returned an illegal move');
@@ -284,13 +303,19 @@ class GameCubit extends Cubit<GameView> {
     }
   }
 
+  /// Whether there is a move of the player's to take back. False when only
+  /// the engine's first move has been played.
+  bool get canTakeBack => game
+      .path(game.current)
+      .any((n) => study || game.at(n.parent).turn == human);
+
   Future<void> undo() async {
+    if (!canTakeBack) return;
     await pause();
-    if (game.current == null) return;
-    var removed = game.nodes.firstWhere((n) => n.id == game.current);
+    var removed = game.node(game.current!);
     var target = removed.parent;
     if (game.at(target).turn != human && target != null) {
-      removed = game.nodes.firstWhere((n) => n.id == target);
+      removed = game.node(target);
       target = removed.parent;
     }
     white = (removed.clocks['white'] ?? white) as int;

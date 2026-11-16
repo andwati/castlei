@@ -6,7 +6,7 @@ import 'package:castlei/core/ui/theme.dart';
 import 'package:castlei/features/play/game_common.dart';
 import 'package:castlei/features/play/play_widgets.dart';
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget host(Widget child) => MaterialApp(

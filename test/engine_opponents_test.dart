@@ -5,7 +5,7 @@ import 'package:castlei/core/ui/engine_avatar.dart';
 import 'package:castlei/core/storage/database.dart';
 import 'package:castlei/core/storage/repository.dart';
 import 'package:castlei/main.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:dartchess/dartchess.dart';
 
 import '../../core/chess/model.dart';
+import '../../core/engine/engine.dart';
 
 /// How good a reviewed move was, from the engine labels stored with each move.
 enum MoveQuality {
@@ -175,9 +176,10 @@ class GameReview {
     final blunders = (c[MoveQuality.blunder] ?? 0);
     final mistakes = (c[MoveQuality.mistake] ?? 0);
     final missed = (c[MoveQuality.missedMate] ?? 0);
+    final allowed = (c[MoveQuality.allowedMate] ?? 0);
     final slips = (c[MoveQuality.inaccuracy] ?? 0);
     if (moves.isEmpty) return 'Nothing to review yet.';
-    if (blunders + mistakes + missed == 0) {
+    if (blunders + mistakes + missed + allowed == 0) {
       return slips == 0
           ? 'A very clean game. No mistakes at all.'
           : 'A clean game: no blunders or mistakes, just ${_n(slips, 'small slip')}.';
@@ -185,6 +187,9 @@ class GameReview {
     if (blunders > 0) {
       return '${_n(blunders, 'blunder')} cost you the most. Let’s look at '
           '${blunders == 1 ? 'it' : 'them'}.';
+    }
+    if (allowed > 0) {
+      return 'You allowed a forced checkmate. Let’s see where.';
     }
     if (missed > 0) {
       return 'You missed a forced checkmate. Let’s find it.';
@@ -261,8 +266,11 @@ GameReview buildReview(
                 playedMate: playedMate,
               ),
         whiteEval: pawns,
+        // Depth 0 is a search with no legal moves: the move was checkmate.
         evalText: playedMate
-            ? 'M${playedScore.abs()}'
+            ? (played['depth'] == 0
+                  ? 'Checkmate'
+                  : mateText(playedScore * sign))
             : '${pawns >= 0 ? '+' : ''}${pawns.toStringAsFixed(1)}',
       ),
     );

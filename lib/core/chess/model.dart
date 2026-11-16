@@ -75,26 +75,70 @@ class ChessGame {
   bool favorite = false, assisted = false;
   List<StudyNode> children(String? parent) =>
       nodes.where((n) => n.parent == parent).toList();
+
+  // Lookups below are asked for on every frame of a running game, so they are
+  // cached. A node's move and parent never change, which keeps the position
+  // reached by a node valid for as long as the node exists.
+  final _byId = <String, StudyNode>{};
+  int _indexed = -1;
+  final _positions = <String, Position>{};
+  final _keys = <String, String>{};
+  Position? _root;
+
+  /// The node with [id]. Throws a [StateError] when there is none.
+  StudyNode node(String id) {
+    var n = _byId[id];
+    if (n == null || _indexed != nodes.length) {
+      _byId
+        ..clear()
+        ..addEntries(nodes.map((n) => MapEntry(n.id, n)));
+      _indexed = nodes.length;
+      n = _byId[id];
+    }
+    if (n == null) throw StateError('No node $id');
+    return n;
+  }
+
   List<StudyNode> path([String? node]) {
     final out = <StudyNode>[];
     var id = node;
     while (id != null) {
-      final n = nodes.firstWhere((e) => e.id == id);
-      out.insert(0, n);
+      final n = this.node(id);
+      out.add(n);
       id = n.parent;
       if (out.length > 10000) throw StateError('Cyclic tree');
     }
-    return out;
+    return out.reversed.toList();
   }
 
   Position at(String? node) {
-    var p = Chess.fromSetup(Setup.parseFen(rootFen));
-    Position position = p;
-    for (final n in path(node)) {
-      position = position.play(Move.parse(n.uci)!);
+    if (node == null) return _root ??= Chess.fromSetup(Setup.parseFen(rootFen));
+    final cached = _positions[node];
+    if (cached != null) return cached;
+    // Walk up to the nearest known position, then play forward from it.
+    final pending = <StudyNode>[];
+    Position? position;
+    String? id = node;
+    while (id != null) {
+      position = _positions[id];
+      if (position != null) break;
+      final n = this.node(id);
+      pending.add(n);
+      id = n.parent;
+      if (pending.length > 10000) throw StateError('Cyclic tree');
     }
-    return position;
+    position ??= at(null);
+    for (final n in pending.reversed) {
+      position = position!.play(Move.parse(n.uci)!);
+      _positions[n.id] = position;
+    }
+    return position!;
   }
+
+  /// [positionKey] of the position at [node], for repetition counting.
+  String keyAt(String? node) => node == null
+      ? _keys[''] ??= positionKey(at(null))
+      : _keys[node] ??= positionKey(at(node));
 
   Position get position => at(current);
   List<StudyNode> get mainline {
@@ -119,8 +163,30 @@ class ChessGame {
     final (_, san) = p.makeSan(move);
     final n = StudyNode(id: newId(), parent: current, uci: uci, san: san);
     nodes.add(n);
+    if (_indexed == nodes.length - 1) {
+      _byId[n.id] = n;
+      _indexed = nodes.length;
+    }
     current = n.id;
     return n;
+  }
+
+  /// Who played and when, for a game against the engine.
+  Map<String, String> get _engineHeaders {
+    final day = DateTime.fromMillisecondsSinceEpoch(created);
+    String two(int n) => n.toString().padLeft(2, '0');
+    final engine =
+        'Stockfish${settings['level'] == null ? '' : ' (${settings['level']})'}';
+    final black = settings['side'] == 'black';
+    final base = settings['baseMs'];
+    return {
+      'Site': 'Castlei',
+      'Date': '${day.year}.${two(day.month)}.${two(day.day)}',
+      'White': black ? engine : 'Player',
+      'Black': black ? 'Player' : engine,
+      if (base is int && base > 0)
+        'TimeControl': '${base ~/ 1000}+${settings['increment'] ?? 0}',
+    };
   }
 
   String exportPgn() {
@@ -146,6 +212,7 @@ class ChessGame {
     return PgnGame(
       headers: {
         ...PgnGame.defaultHeaders(),
+        if (source == 'engine') ..._engineHeaders,
         ...headers,
         'Event': title,
         'Result': result,

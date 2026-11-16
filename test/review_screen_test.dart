@@ -7,7 +7,7 @@ import 'package:castlei/core/storage/repository.dart';
 import 'package:castlei/core/ui/theme.dart';
 import 'package:castlei/features/analysis/review_screen.dart';
 import 'package:dartchess/dartchess.dart' hide File;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 String data(String label, int best, int played, List<String> pv) => jsonEncode({

@@ -1,5 +1,5 @@
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/chess/model.dart';
 import '../../core/storage/repository.dart';
@@ -153,6 +153,21 @@ class _LessonScreenState extends State<LessonScreen>
   final watch = Stopwatch();
   final Set<int> helped = {};
   LessonExercise get exercise => widget.lesson.exercises[index];
+
+  /// The next move of a line that continues what has been played, once a hint
+  /// was asked for. Null when no line goes on from here, as at the end of an
+  /// example being shown.
+  String? get _hintMove {
+    if (hints == 0 || done) return null;
+    final soFar = played.join(' ');
+    for (final line in exercise.solutions) {
+      if (line.length > ply && line.take(ply).join(' ') == soFar) {
+        return line[ply];
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -446,11 +461,7 @@ class _LessonScreenState extends State<LessonScreen>
                       label: 'Not the move',
                     ),
                 },
-                arrow: hints > 0 && exercise.solutions.isNotEmpty && !done
-                    ? exercise.solutions.firstWhere(
-                        (line) => line.take(ply).join(' ') == played.join(' '),
-                      )[ply]
-                    : null,
+                arrow: _hintMove,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/chess/engine_opponents.dart';
 import '../../core/chess/model.dart';

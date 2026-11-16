@@ -6,7 +6,7 @@ import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dartchess/dartchess.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/storage/repository.dart';
 import '../../core/diagnostics/crash.dart';

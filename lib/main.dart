@@ -2,9 +2,10 @@ import 'core/ui/board_style.dart';
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:io' as io;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:dartchess/dartchess.dart';
@@ -144,7 +145,15 @@ class _AppState extends State<CastleiApp> {
     // SafeArea consumes these insets so route-level padding cannot add them twice.
     builder: (context, child) => ColoredBox(
       color: Theme.of(context).colorScheme.surface,
-      child: SafeArea(top: false, child: child ?? const SizedBox.shrink()),
+      child: SafeArea(
+        top: false,
+        // fl_chart still builds on package:flutter/material.dart; the bridge
+        // hands it this app's theme. Remove it once fl_chart has migrated.
+        // ignore: deprecated_member_use
+        child: MaterialUiCompatibilityBridge(
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
     ),
   );
 }
@@ -452,18 +461,13 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
             ),
             FilledButton(
               onPressed: () {
-                try {
-                  Chess.fromSetup(Setup.parseFen(fen));
-                  if (base < 0 ||
-                      base > 180 ||
-                      increment < 0 ||
-                      increment > 60) {
-                    throw const FormatException('Invalid time control');
-                  }
+                fen = fen.trim();
+                final problem = newGameProblem(fen, base, increment);
+                if (problem == null) {
                   Navigator.pop(ctx, true);
-                } catch (e) {
+                } else {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('$e')));
+                      .showSnackBar(SnackBar(content: Text(problem)));
                 }
               },
               child: const Text('Create'),
@@ -481,7 +485,7 @@ class _HomeState extends State<HomeShell> with WidgetsBindingObserver {
         ? 'Study · $stamp'
         : 'Stockfish · ${EngineOpponent.forSkill(level).label} · $stamp';
     if (side == 'random') {
-      side = DateTime.now().microsecond.isEven ? 'white' : 'black';
+      side = Random().nextBool() ? 'white' : 'black';
     }
     final g = ChessGame(
       id: newId(),
@@ -1371,4 +1375,20 @@ String resultLabel(Map<String, dynamic> row) {
     return whiteWon == (side == 'white') ? 'You won' : 'You lost';
   }
   return result == '1-0' ? 'White won' : 'Black won';
+}
+
+/// Why a game cannot start from [fen] with [base] minutes and [increment]
+/// seconds a move, in words for the player; null when it can.
+String? newGameProblem(String fen, int base, int increment) {
+  try {
+    if (Chess.fromSetup(Setup.parseFen(fen.trim())).isGameOver) {
+      return 'That position is already finished.';
+    }
+  } catch (_) {
+    return 'That FEN is not a legal chess position.';
+  }
+  if (base < 0 || base > 180 || increment < 0 || increment > 60) {
+    return 'Use up to 180 minutes and up to 60 seconds a move.';
+  }
+  return null;
 }

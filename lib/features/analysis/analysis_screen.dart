@@ -1,7 +1,7 @@
 import '../../core/ui/board_style.dart';
 
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -176,8 +176,11 @@ class _AnalysisScreenState extends State<AnalysisScreen>
           actions: [
             IconButton(
               tooltip: 'Copy PGN',
-              onPressed: () =>
-                  Clipboard.setData(ClipboardData(text: g.exportPgn())),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: g.exportPgn()));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text('PGN copied')));
+              },
               icon: const Icon(Icons.ios_share),
             ),
             const SizedBox(width: 8),

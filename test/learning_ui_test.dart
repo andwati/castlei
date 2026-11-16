@@ -12,7 +12,7 @@ import 'package:castlei/features/learn/lesson_screen.dart';
 import 'package:castlei/features/learn/lessons.dart';
 import 'package:castlei/features/learn/coordinates.dart';
 import 'package:dartchess/dartchess.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget host(Widget child, {Brightness brightness = Brightness.light}) =>

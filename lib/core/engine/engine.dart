@@ -43,9 +43,14 @@ class EngineLine {
     );
   }
 
-  String label(bool whiteTurn) => mate
-      ? 'M${score * (whiteTurn ? 1 : -1)}'
-      : (score * (whiteTurn ? 1 : -1) / 100).toStringAsFixed(2);
+  /// The score from White's side: "+0.35", "-1.20", "+M3" (White mates in 3),
+  /// "-M3" (Black mates in 3).
+  String label(bool whiteTurn) {
+    final white = score * (whiteTurn ? 1 : -1);
+    if (mate) return mateText(white);
+    return '${white > 0 ? '+' : ''}${(white / 100).toStringAsFixed(2)}';
+  }
+
   Map<String, dynamic> toJson() => {
     'depth': depth,
     'score': score,
@@ -54,6 +59,11 @@ class EngineLine {
     'bounded': bounded,
   };
 }
+
+/// A forced mate in [whiteMate] moves, signed for White: "+M3" when White
+/// mates, "-M3" when Black does, "#" for checkmate on the board.
+String mateText(int whiteMate) =>
+    whiteMate == 0 ? '#' : '${whiteMate > 0 ? '+' : '-'}M${whiteMate.abs()}';
 
 /// Records [line] as the current answer for its variation and returns the line
 /// now held. A bound line (`lowerbound`/`upperbound`) is what the engine prints
@@ -103,7 +113,18 @@ class EngineClient {
   bool _disposed = false;
   Future<void> initialize() => _initialization ??= () async {
     final sw = Stopwatch()..start();
-    await _initialize();
+    try {
+      await _initialize();
+    } catch (_) {
+      // Let the next search start the engine again instead of failing for the
+      // rest of the session.
+      _port?.close();
+      _isolate?.kill();
+      _commands = null;
+      _sent.clear();
+      _initialization = null;
+      rethrow;
+    }
     Perf.record('engine_init', metrics: {'ms': sw.elapsedMilliseconds});
   }();
   Future<void> _initialize() async {
@@ -116,6 +137,13 @@ class EngineClient {
         _messages.add(m);
       }
     });
+    // Listen before the worker starts: a library that fails to load reports
+    // "error ..." straight away and nothing more.
+    final uci = _messages.stream.firstWhere(
+      (s) => s == 'uciok' || s.startsWith('error '),
+    );
+    // Not reached when the worker never answers; that is reported below.
+    uci.ignore();
     _isolate = await Isolate.spawn(_worker, [
       _port!.sendPort,
       Platform.isAndroid
@@ -125,9 +153,9 @@ class EngineClient {
           : '${Directory.current.path}/build/native/libcastlei_engine.so',
     ]);
     _commands = await ready.future.timeout(const Duration(seconds: 15));
-    final uci = _messages.stream.firstWhere((s) => s == 'uciok');
     send('uci');
-    await uci.timeout(const Duration(seconds: 20));
+    final answer = await uci.timeout(const Duration(seconds: 20));
+    if (answer != 'uciok') throw StateError(answer);
     await barrier();
   }
 
@@ -192,9 +220,20 @@ class EngineClient {
         send(
           'go movetime $milliseconds${onlyMove == null ? '' : ' searchmoves $onlyMove'}',
         );
-        final best = await done.future.timeout(
-          Duration(milliseconds: milliseconds + 15000),
-        );
+        final String best;
+        try {
+          best = await done.future.timeout(
+            Duration(milliseconds: milliseconds + 15000),
+          );
+        } on TimeoutException {
+          // Stop the search and wait for its `bestmove`, so that a late one is
+          // not read as the answer to the next search.
+          send('stop');
+          await done.future
+              .timeout(const Duration(seconds: 5))
+              .then<void>((_) {}, onError: (_) {});
+          rethrow;
+        }
         Perf.record(
           'engine_search',
           attributes: {
@@ -321,7 +360,25 @@ String classify(EngineLine best, EngineLine played, {bool sameMove = false}) {
   if (played.mate && played.score < 0 && (!best.mate || best.score >= 0)) {
     return 'Allowed Forced Mate';
   }
-  if (best.mate || played.mate) return 'Forced mate';
+  String graded(int lost) => lost <= 0
+      ? 'Forced mate'
+      : lost <= 2
+      ? 'Good'
+      : 'Inaccuracy';
+  if (played.mate && played.score > 0) {
+    if (!best.mate || best.score < 0) return 'Forced mate';
+    // Both lines mate: grade the moves given away. [best] counts from before
+    // the move. [played] comes from the search of the position after it, where
+    // the mate is one move closer, unless the move itself was checkmate
+    // (depth 0, stored as mate in 1).
+    final delivered = played.depth == 0 && played.score == 1;
+    return graded(played.score + (delivered ? 0 : 1) - best.score);
+  }
+  if (best.mate && best.score < 0) {
+    // Lost whatever is played. A move that holds out as long as the best one
+    // is as good as it gets; one that is mated sooner gives moves away.
+    return played.mate ? graded(played.score - best.score) : 'Good';
+  }
   final loss = best.score - played.score;
   return loss >= 200
       ? 'Blunder'

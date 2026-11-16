@@ -4,6 +4,22 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.10 — 2026-11-16
+
+Fairer games and truer reviews.
+
+- The engine no longer claims a draw when it is winning.
+- Long games stay smooth: the app no longer slows down as the move count grows.
+- The engine answers forced moves at once.
+- Reviews no longer call a game clean when you allowed a checkmate, and mate scores show who is winning (+M3 or -M3).
+- With two-square castling, tapping your rook selects it instead of castling.
+- Any checkmate now solves a puzzle.
+- Fixed a lesson error when asking for a hint and then the example.
+- The progress page keeps its place when you switch filters.
+- About 13 MB smaller.
+
+Android build 18 (1.1.10+18).
+
 ## 1.1.9 — 2026-11-12
 
 A faster, stronger engine.

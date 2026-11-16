@@ -3,7 +3,8 @@ import 'board_style.dart';
 import 'dart:math' as math;
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dartchess/dartchess.dart';
 
@@ -255,7 +256,14 @@ class _BoardState extends State<ChessBoard> {
           move = NormalMove(from: from, to: s, promotion: role);
         }
       }
-      if (p.isLegal(move)) {
+      // With the two-square method the king's rook is not a destination, so a
+      // tap on it picks the rook up instead of castling by surprise.
+      final target = p.board.pieceAt(s);
+      final ontoRook =
+          piece?.role == Role.king &&
+          target?.role == Role.rook &&
+          target?.color == p.turn;
+      if (!(BoardStyle.castleTwoSquares && ontoRook) && p.isLegal(move)) {
         setState(() => selected = null);
         widget.onMove(move);
         return;
@@ -494,21 +502,6 @@ class _BoardState extends State<ChessBoard> {
                       ),
                     ),
                   ),
-                  if (dragFrom != null &&
-                      dragPosition != null &&
-                      !widget.drawing &&
-                      widget.position.board.pieceAt(dragFrom!) != null)
-                    Positioned(
-                      left: dragPosition!.dx - size / 2,
-                      top: dragPosition!.dy - size / 2,
-                      width: size,
-                      height: size,
-                      child: IgnorePointer(
-                        child: SvgPicture.asset(
-                          'assets/pieces/${widget.position.turn == Side.white ? 'w' : 'b'}${widget.position.board.pieceAt(dragFrom!)!.role.letter.toUpperCase()}.svg',
-                        ),
-                      ),
-                    ),
                   IgnorePointer(
                     child: SizedBox.square(
                       dimension: box.maxWidth,
@@ -548,6 +541,26 @@ class _BoardState extends State<ChessBoard> {
                       ),
                     ),
                   ),
+                  if (dragFrom != null &&
+                      dragPosition != null &&
+                      !widget.drawing &&
+                      widget.position.board.pieceAt(dragFrom!) != null)
+                    Positioned(
+                      left: dragPosition!.dx - size / 2,
+                      top: dragPosition!.dy - size / 2,
+                      width: size,
+                      height: size,
+                      child: IgnorePointer(
+                        // Lifted pieces are drawn larger, so the finger does not
+                        // hide them.
+                        child: Transform.scale(
+                          scale: 1.5,
+                          child: _piece(
+                            'assets/pieces/${widget.position.turn == Side.white ? 'w' : 'b'}${widget.position.board.pieceAt(dragFrom!)!.role.letter.toUpperCase()}.svg',
+                          ),
+                        ),
+                      ),
+                    ),
                   IgnorePointer(
                     child: CustomPaint(
                       size: Size.square(box.maxWidth),
@@ -678,5 +691,6 @@ class _Arrows extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_Arrows old) => true;
+  bool shouldRepaint(_Arrows old) =>
+      old.flipped != flipped || !listEquals(old.shapes, shapes);
 }

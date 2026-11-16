@@ -2,7 +2,7 @@ import '../../core/ui/plural.dart';
 
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/storage/repository.dart';
 import '../../core/ui/widgets.dart';
