@@ -5,7 +5,7 @@ Releases are built locally. The CI and Release workflows are parked in `.github/
 ## Signing key
 The Android release key lives at `android/castlei-release.jks` with its passwords in `android/key.properties` (both gitignored). **Keep a copy in a password manager.** With Play App Signing this is the **upload** key; Google holds the app-signing key.
 
-- Upload certificate SHA-256: `F2:85:EE:48:CF:32:1D:24:38:B1:5A:A9:AD:D2:6B:31:9F:69:11:DE:35:CA:E0:5F:6C:4A:74:BD:57:A0:0D:6A`
+- Upload certificate SHA-256: `B2:69:B0:78:98:44:65:5F:C6:EF:7E:15:B3:FE:93:BF:1E:09:8A:51:30:5B:D2:90:19:9B:41:56:AA:A4:2D:7E` (alias `upload`, created 2026-11-16 after the first key was lost; Google accepts it from 2026-11-18. The first key was `F2:85:EE:48:…:0D:6A`.)
 - Register the **app-signing** certificate's SHA-1/SHA-256 (Play Console > Test and release > App signing) with the Firebase Android app, or Google sign-in fails in Play-installed builds.
 - Without `key.properties` a release build silently falls back to the debug key; always check the fingerprint below.
 
