@@ -52,6 +52,8 @@ native/stockfish/
 *.keystore
 *.jks
 android/key.properties
+android/key*.properties
+*.pem
 android/app/google-services.json
 
 # Firebase client config (public identifiers, but kept out of the repo; see docs/BUILDING.md)

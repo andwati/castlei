@@ -20,6 +20,7 @@ import 'core/diagnostics/perf.dart';
 import 'core/diagnostics/analytics.dart';
 import 'core/cloud/account.dart';
 import 'core/cloud/cloud_backup.dart';
+import 'core/cloud/billing.dart';
 import 'core/cloud/entitlements.dart';
 import 'core/cloud/remote_config.dart';
 import 'core/notifications/notifications.dart';
@@ -67,6 +68,7 @@ Future<void> main() async {
   unawaited(() async {
     // Local-only services first; none of this may delay the first frame.
     await Entitlements.instance.load(repo);
+    unawaited(PlusBilling.instance.start(repo));
     await DiagnosticsLog.attach(repo);
     await Notifications.start(repo);
     await CrashReporting.start(repo);

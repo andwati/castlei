@@ -11,6 +11,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:castlei/core/cloud/billing.dart';
 
 void main() {
   group('reminder timing', () {
@@ -206,6 +207,23 @@ void main() {
       ]);
       await BackupService(db).restore(withPlus);
       await e.load(repo);
+      expect(e.plus, isFalse);
+      await db.close();
+    });
+
+    test('store ownership grants and revokes the store flag only', () async {
+      final db = AppDatabase.memory();
+      final repo = Repository(db);
+      final e = Entitlements.instance;
+      await e.load(repo);
+      await e.setTestUnlock(repo, false);
+      await e.setStorePurchase(repo, false);
+      await PlusBilling.instance.applyOwnership(repo, true);
+      expect(e.plus, isTrue);
+      expect(e.storePurchase, isTrue);
+      await e.load(repo);
+      expect(e.storePurchase, isTrue);
+      await PlusBilling.instance.applyOwnership(repo, false); // refunded
       expect(e.plus, isFalse);
       await db.close();
     });

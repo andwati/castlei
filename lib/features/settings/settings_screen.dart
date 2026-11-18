@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/app_info.dart';
 import '../../core/cloud/account.dart';
+import '../../core/cloud/billing.dart';
 import '../../core/cloud/cloud_backup.dart';
 import '../../core/cloud/entitlements.dart';
 import '../../core/diagnostics/analytics.dart';
@@ -267,27 +268,58 @@ class _SettingsState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            FilledButton.tonalIcon(
-              onPressed: () {
-                Analytics.log('plus_unlock_tapped');
-                showDialog<void>(
-                  context: context,
-                  builder: (d) => ActionDialog(
-                    title: const Text('Castlei Plus'),
-                    content: const Text(
-                      'Purchases will open once Castlei is released in the app store.',
+            ListenableBuilder(
+              listenable: PlusBilling.instance,
+              builder: (context, _) {
+                final b = PlusBilling.instance;
+                final busy =
+                    b.state == BillingState.purchasing ||
+                    b.state == BillingState.loading;
+                final label = b.state == BillingState.pending
+                    ? 'Payment pending…'
+                    : b.price == null
+                    ? 'Unlock Plus'
+                    : 'Unlock Plus · ${b.price}';
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton.tonalIcon(
+                      onPressed:
+                          busy ||
+                              b.state == BillingState.pending ||
+                              b.state == BillingState.unavailable
+                          ? null
+                          : () {
+                              Analytics.log('plus_unlock_tapped');
+                              b.buy();
+                            },
+                      icon: const Icon(Icons.lock_open_rounded),
+                      label: Text(label),
                     ),
-                    actions: [
-                      FilledButton(
-                        onPressed: () => Navigator.pop(d),
-                        child: const Text('OK'),
+                    if (b.state == BillingState.unavailable)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          b.storeReachable
+                              ? "Plus isn't available yet. Check back soon."
+                              : 'Purchases need Google Play. Install Castlei from the Play Store to unlock Plus.',
+                          style: context.text.bodySmall?.copyWith(
+                            color: c.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
+                    if (b.message != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(b.message!, style: context.text.bodySmall),
+                      ),
+                    TextButton(
+                      onPressed: busy ? null : b.restore,
+                      child: const Text('Restore purchase'),
+                    ),
+                  ],
                 );
               },
-              icon: const Icon(Icons.lock_open_rounded),
-              label: const Text('Unlock Plus'),
             ),
           ],
         ),

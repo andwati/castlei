@@ -4,6 +4,15 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.11 — 2026-11-18
+
+Castlei Plus can now be unlocked.
+
+- Unlock Castlei Plus with a one-time purchase through Google Play: automatic cloud backups and your last 5 backups. No subscription.
+- Restore purchase brings Plus back after a reinstall or on a new phone.
+
+Android build 19 (1.1.11+19).
+
 ## 1.1.10 — 2026-11-16
 
 Fairer games and truer reviews.
