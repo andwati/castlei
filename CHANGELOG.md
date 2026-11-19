@@ -4,6 +4,14 @@ Release notes for each Google Play release, newest first. The bullets under each
 what goes into `play/whatsnew/whatsnew-en-US` for that release. Add an entry here every time
 the version in `pubspec.yaml` is bumped.
 
+## 1.1.12 — 2026-11-19
+
+Available on more devices.
+
+- Castlei can now be installed on more device types, such as Chromebooks, desktops and tablets that Google Play used to filter out.
+
+Android build 20 (1.1.12+20).
+
 ## 1.1.11 — 2026-11-18
 
 Castlei Plus can now be unlocked.
